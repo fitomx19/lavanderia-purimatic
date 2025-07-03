@@ -1,0 +1,1163 @@
+{
+  "info": {
+    "name": "Lavandería Purimatic - Sistema Completo con Ventas",
+    "description": "API completa para el sistema de lavandería con gestión de usuarios, productos, máquinas, tarjetas, ciclos de servicio y ventas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:6000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Autenticación",
+      "item": [
+        {
+          "name": "Login - Empleado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set('token', response.data.token);",
+                  "        console.log('Token guardado:', response.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"AdminPurimatic2024\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Empleados",
+      "item": [
+        {
+          "name": "Crear Empleado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"empleado01\",\n  \"email\": \"empleado01@purimatic.com\",\n  \"password\": \"password123\",\n  \"role\": \"employee\",\n  \"store_id\": \"store_001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/employees",
+              "host": ["{{base_url}}"],
+              "path": ["employees"]
+            }
+          }
+        },
+        {
+          "name": "Listar Empleados",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["employees"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Empleado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/6866ced114f19bf5e0dd6bf5",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "6866ced114f19bf5e0dd6bf5"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Empleado",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"empleado01_updated@purimatic.com\",\n  \"role\": \"employee\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/6866ced114f19bf5e0dd6bf5",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "6866ced114f19bf5e0dd6bf5"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Empleado",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/employee_id",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "employee_id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧑‍🤝‍🧑 Clientes",
+      "item": [
+        {
+          "name": "Crear Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Pérez\",\n  \"email\": \"juan.perez@email.com\",\n  \"telefono\": \"555-1234\",\n  \"direccion\": \"Calle Principal 123\",\n  \"saldo_tarjeta_recargable\": 50.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients",
+              "host": ["{{base_url}}"],
+              "path": ["clients"]
+            }
+          }
+        },
+        {
+          "name": "Listar Clientes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["clients"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients/client_id",
+              "host": ["{{base_url}}"],
+              "path": ["clients", "client_id"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Pérez Actualizado\",\n  \"telefono\": \"555-5678\",\n  \"saldo_tarjeta_recargable\": 75.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients/client_id",
+              "host": ["{{base_url}}"],
+              "path": ["clients", "client_id"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients/client_id",
+              "host": ["{{base_url}}"],
+              "path": ["clients", "client_id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Productos",
+      "item": [
+        {
+          "name": "Crear Producto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Detergente Premium\",\n  \"descripcion\": \"Detergente concentrado para ropa\",\n  \"precio\": 15.50,\n  \"categoria\": \"limpieza\",\n  \"stock\": 100,\n  \"stock_minimo\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": ["{{base_url}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "Listar Productos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Producto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products/product_id",
+              "host": ["{{base_url}}"],
+              "path": ["products", "product_id"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"precio\": 16.00,\n  \"stock\": 150\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products/product_id",
+              "host": ["{{base_url}}"],
+              "path": ["products", "product_id"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Producto",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products/product_id",
+              "host": ["{{base_url}}"],
+              "path": ["products", "product_id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧺 Lavadoras",
+      "item": [
+        {
+          "name": "Crear Lavadora",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modelo\": \"WhirlPool WX500\",\n  \"capacidad\": 15,\n  \"tipo_carga\": \"frontal\",\n  \"consumo_energia\": 2.5,\n  \"store_id\": \"store_001\",\n  \"estado\": \"disponible\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/washers",
+              "host": ["{{base_url}}"],
+              "path": ["washers"]
+            }
+          }
+        },
+        {
+          "name": "Listar Lavadoras",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/washers?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["washers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Lavadora",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/washers/washer_id",
+              "host": ["{{base_url}}"],
+              "path": ["washers", "washer_id"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Lavadora",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"mantenimiento\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/washers/washer_id",
+              "host": ["{{base_url}}"],
+              "path": ["washers", "washer_id"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Lavadora",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/washers/washer_id",
+              "host": ["{{base_url}}"],
+              "path": ["washers", "washer_id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔥 Secadoras",
+      "item": [
+        {
+          "name": "Crear Secadora",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modelo\": \"Samsung DV400\",\n  \"capacidad\": 12,\n  \"tipo_secado\": \"gas\",\n  \"consumo_energia\": 1.8,\n  \"store_id\": \"store_001\",\n  \"estado\": \"disponible\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/dryers",
+              "host": ["{{base_url}}"],
+              "path": ["dryers"]
+            }
+          }
+        },
+        {
+          "name": "Listar Secadoras",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dryers?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["dryers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Secadora",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dryers/dryer_id",
+              "host": ["{{base_url}}"],
+              "path": ["dryers", "dryer_id"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Secadora",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ocupado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/dryers/dryer_id",
+              "host": ["{{base_url}}"],
+              "path": ["dryers", "dryer_id"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Secadora",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dryers/dryer_id",
+              "host": ["{{base_url}}"],
+              "path": ["dryers", "dryer_id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Tarjetas Recargables",
+      "item": [
+        {
+          "name": "Crear Tarjeta para Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"initial_balance\": 100.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients/client_id/cards",
+              "host": ["{{base_url}}"],
+              "path": ["clients", "client_id", "cards"]
+            }
+          }
+        },
+        {
+          "name": "Listar Tarjetas de Cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients/client_id/cards",
+              "host": ["{{base_url}}"],
+              "path": ["clients", "client_id", "cards"]
+            }
+          }
+        },
+        {
+          "name": "Agregar Saldo a Tarjeta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cards/card_id/add-balance",
+              "host": ["{{base_url}}"],
+              "path": ["cards", "card_id", "add-balance"]
+            }
+          }
+        },
+        {
+          "name": "Transferir Saldo entre Tarjetas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_card_id\": \"card_id_1\",\n  \"to_card_id\": \"card_id_2\",\n  \"amount\": 25.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cards/transfer-balance",
+              "host": ["{{base_url}}"],
+              "path": ["cards", "transfer-balance"]
+            }
+          }
+        },
+        {
+          "name": "Consultar Saldo de Tarjeta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/cards/card_id/balance",
+              "host": ["{{base_url}}"],
+              "path": ["cards", "card_id", "balance"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Tarjeta",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/cards/card_id",
+              "host": ["{{base_url}}"],
+              "path": ["cards", "card_id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Ciclos de Servicio",
+      "item": [
+        {
+          "name": "Listar Ciclos de Servicio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Ciclos por Tipo de Servicio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles?service_type=lavado",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles"],
+              "query": [
+                {
+                  "key": "service_type",
+                  "value": "lavado"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Ciclos por Tipo de Máquina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles?machine_type=washer",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles"],
+              "query": [
+                {
+                  "key": "machine_type",
+                  "value": "washer"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Ciclo de Servicio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lavado Especializado\",\n  \"description\": \"Ciclo de lavado para ropa delicada\",\n  \"service_type\": \"lavado\",\n  \"duration_minutes\": 40,\n  \"price\": 30.00,\n  \"machine_types_allowed\": [\"washer\"],\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/service-cycles",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles"]
+            }
+          }
+        },
+        {
+          "name": "Obtener Ciclo de Servicio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles/cycle_id",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles", "cycle_id"]
+            }
+          }
+        },
+        {
+          "name": "Validar Ciclo para Máquina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles/cycle_id/validate/washer",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles", "cycle_id", "validate", "washer"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Ciclo de Servicio",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles/cycle_id",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles", "cycle_id"]
+            }
+          }
+        },
+        {
+          "name": "Inicializar Ciclos Predefinidos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/service-cycles/initialize",
+              "host": ["{{base_url}}"],
+              "path": ["service-cycles", "initialize"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 Ventas",
+      "item": [
+        {
+          "name": "Crear Venta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"client_id_opcional\",\n  \"store_id\": \"store_001\",\n  \"items\": [\n    {\n      \"type\": \"product\",\n      \"product_id\": \"product_id\",\n      \"quantity\": 2,\n      \"unit_price\": 15.50\n    },\n    {\n      \"type\": \"service\",\n      \"service_cycle_id\": \"cycle_id\",\n      \"machine_id\": \"washer_id\",\n      \"machine_type\": \"washer\",\n      \"unit_price\": 25.00\n    }\n  ],\n  \"payment_methods\": [\n    {\n      \"payment_type\": \"tarjeta\",\n      \"amount\": 56.00,\n      \"card_id\": \"card_id\"\n    }\n  ],\n  \"total_amount\": 56.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sales",
+              "host": ["{{base_url}}"],
+              "path": ["sales"]
+            }
+          }
+        },
+        {
+          "name": "Listar Ventas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["sales"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Ventas por Estado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales?status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["sales"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Ventas de Hoy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales?today=true",
+              "host": ["{{base_url}}"],
+              "path": ["sales"],
+              "query": [
+                {
+                  "key": "today",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Venta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales/sale_id",
+              "host": ["{{base_url}}"],
+              "path": ["sales", "sale_id"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Estado de Venta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sales/sale_id/status",
+              "host": ["{{base_url}}"],
+              "path": ["sales", "sale_id", "status"]
+            }
+          }
+        },
+        {
+          "name": "Completar Venta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales/sale_id/complete",
+              "host": ["{{base_url}}"],
+              "path": ["sales", "sale_id", "complete"]
+            }
+          }
+        },
+        {
+          "name": "Resumen de Ventas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales/summary?start_date=2024-01-01&end_date=2024-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["sales", "summary"],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

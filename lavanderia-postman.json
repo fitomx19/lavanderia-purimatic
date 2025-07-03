@@ -1,0 +1,631 @@
+{
+	"info": {
+		"name": "Lavandería Purimatic API",
+		"description": "Colección completa para probar la API del sistema de gestión de lavandería",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🔐 Autenticación",
+			"item": [
+				{
+					"name": "Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('auth_token', response.data.access_token);",
+									"    console.log('Token guardado:', response.data.access_token);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"AdminPurimatic2024!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login Empleado Centro",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"empleado_centro\",\n    \"password\": \"Empleado123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Verificar Token",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/verify",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "verify"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Empleados",
+			"item": [
+				{
+					"name": "Crear Empleado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"nuevo_empleado\",\n    \"email\": \"nuevo@purimatic.com\",\n    \"password\": \"Password123!\",\n    \"role\": \"empleado\",\n    \"store_id\": \"store_001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/employees/",
+							"host": ["{{base_url}}"],
+							"path": ["employees", ""]
+						}
+					}
+				},
+				{
+					"name": "Listar Empleados",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/employees/?page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["employees", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Empleado Actual",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/employees/current",
+							"host": ["{{base_url}}"],
+							"path": ["employees", "current"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👤 Clientes",
+			"item": [
+				{
+					"name": "Crear Cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"Pedro González\",\n    \"telefono\": \"+58-412-9876543\",\n    \"email\": \"pedro.gonzalez@email.com\",\n    \"saldo_tarjeta_recargable\": 75.50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/clients/",
+							"host": ["{{base_url}}"],
+							"path": ["clients", ""]
+						}
+					}
+				},
+				{
+					"name": "Listar Clientes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/clients/?page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["clients", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar Saldo Cliente",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"saldo_tarjeta_recargable\": 25.00,\n    \"operacion\": \"agregar\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/clients/{{client_id}}/balance",
+							"host": ["{{base_url}}"],
+							"path": ["clients", "{{client_id}}", "balance"]
+						}
+					}
+				},
+				{
+					"name": "Buscar Clientes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/clients/search?q=Carlos&page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["clients", "search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "Carlos"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📦 Productos",
+			"item": [
+				{
+					"name": "Crear Producto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"Detergente Ultra Limpio\",\n    \"descripcion\": \"Detergente concentrado para todo tipo de ropa\",\n    \"precio\": 15.75,\n    \"tipo\": \"jabon\",\n    \"stock\": 40\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/products/",
+							"host": ["{{base_url}}"],
+							"path": ["products", ""]
+						}
+					}
+				},
+				{
+					"name": "Listar Productos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/products/?page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["products", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar Stock Producto",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 15,\n    \"operation\": \"agregar\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/products/{{product_id}}/stock",
+							"host": ["{{base_url}}"],
+							"path": ["products", "{{product_id}}", "stock"]
+						}
+					}
+				},
+				{
+					"name": "Productos Stock Bajo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/products/low-stock?threshold=20&page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["products", "low-stock"],
+							"query": [
+								{
+									"key": "threshold",
+									"value": "20"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧺 Lavadoras",
+			"item": [
+				{
+					"name": "Crear Lavadora",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"numero\": 5,\n    \"marca\": \"Bosch\",\n    \"capacidad\": 14,\n    \"estado\": \"disponible\",\n    \"store_id\": \"store_001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/washers/",
+							"host": ["{{base_url}}"],
+							"path": ["washers", ""]
+						}
+					}
+				},
+				{
+					"name": "Lavadoras por Tienda",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/washers/store/store_001?page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["washers", "store", "store_001"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Lavadoras Disponibles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/washers/store/store_001/available",
+							"host": ["{{base_url}}"],
+							"path": ["washers", "store", "store_001", "available"]
+						}
+					}
+				},
+				{
+					"name": "Cambiar Estado Lavadora",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"estado\": \"ocupada\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/washers/{{washer_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["washers", "{{washer_id}}", "status"]
+						}
+					}
+				},
+				{
+					"name": "Estadísticas Lavadoras",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/washers/store/store_001/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["washers", "store", "store_001", "statistics"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🌪️ Secadoras",
+			"item": [
+				{
+					"name": "Crear Secadora",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"numero\": 4,\n    \"marca\": \"Bosch\",\n    \"capacidad\": 14,\n    \"estado\": \"disponible\",\n    \"store_id\": \"store_001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/dryers/",
+							"host": ["{{base_url}}"],
+							"path": ["dryers", ""]
+						}
+					}
+				},
+				{
+					"name": "Secadoras por Tienda",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dryers/store/store_001?page=1&per_page=10",
+							"host": ["{{base_url}}"],
+							"path": ["dryers", "store", "store_001"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Secadoras Disponibles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dryers/store/store_001/available",
+							"host": ["{{base_url}}"],
+							"path": ["dryers", "store", "store_001", "available"]
+						}
+					}
+				},
+				{
+					"name": "Cambiar Estado Secadora",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"estado\": \"mantenimiento\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/dryers/{{dryer_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["dryers", "{{dryer_id}}", "status"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
