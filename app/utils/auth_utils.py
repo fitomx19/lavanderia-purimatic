@@ -5,6 +5,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_tok
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Callable
 from app.utils.response_utils import error_response
+import logging
+
+logger = logging.getLogger(__name__)
 
 def hash_password(password: str) -> str:
     """
@@ -75,6 +78,8 @@ def role_required(required_roles: list) -> Callable:
                 
                 user_role = user_info.get('role')
                 
+                current_app.logger.info(f"Verificando rol para usuario {current_user_id}. Info: {user_info}. Rol de usuario: {user_role}. Roles requeridos: {required_roles}")
+                
                 if user_role not in required_roles:
                     return error_response("Acceso denegado: permisos insuficientes", 403)
                 
@@ -94,10 +99,13 @@ def admin_required(f):
     
     Args:
         f: Función a decorar
+
+    
         
     Returns:
         Función decorada
     """
+    logger.info(f"Admin required: {f}")
     return role_required(['admin'])(f)
 
 def employee_required(f):

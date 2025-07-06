@@ -13,7 +13,7 @@ employee_bp = Blueprint('employees', __name__)
 # Instanciar servicios
 employee_service = EmployeeService()
 
-@employee_bp.route('/', methods=['POST'])
+@employee_bp.route('', methods=['POST'])
 @admin_required
 def create_employee(current_user):
     """
@@ -59,7 +59,7 @@ def create_employee(current_user):
         logger.error(f"Error en create employee endpoint: {e}")
         return error_response('Error interno del servidor', 500)
 
-@employee_bp.route('/', methods=['GET'])
+@employee_bp.route('', methods=['GET'])
 @employee_required
 def get_employees(current_user):
     """
@@ -91,11 +91,17 @@ def get_employees(current_user):
             store_id=store_id,
             role=role
         )
+
+        logger.info(f"Result: {result}")
         
         if result['success']:
+            # Acceder a los datos de paginación correctamente
+            pagination_data = result.get('pagination', {})
             return paginated_response(
                 data=result['data'],
-                pagination=result['pagination'],
+                page=pagination_data.get('page'),
+                per_page=pagination_data.get('per_page'),
+                total=pagination_data.get('total'),
                 message=result['message']
             )
         else:
@@ -254,7 +260,9 @@ def get_employees_by_store(current_user, store_id):
         if result['success']:
             return paginated_response(
                 data=result['data'],
-                pagination=result['pagination'],
+                page=result['page'],
+                per_page=result['per_page'],
+                total=result['total'],
                 message=result['message']
             )
         else:

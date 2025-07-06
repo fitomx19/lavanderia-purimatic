@@ -73,7 +73,7 @@ class UserEmployeeUpdateSchema(Schema):
     Schema para actualización de usuarios empleados
     """
     
-    _id = fields.Str(dump_only=True)
+    _id = fields.Str(allow_none=True)
     username = fields.Str(
         validate=validate.Length(min=3, max=50),
         allow_none=True

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
 from bson import ObjectId
@@ -74,7 +74,7 @@ class BaseRepository(ABC):
             if document is None:
                 raise RuntimeError(f"No se pudo recuperar el documento después del upsert en {self.collection_name}")
             
-            return self._format_document(document)
+            return cast(Dict[str, Any], self._format_document(document))
             
         except PyMongoError as e:
             logger.error(f"Error en upsert de {self.collection_name}: {e}")
@@ -246,21 +246,30 @@ class BaseRepository(ABC):
     
     def _format_document(self, document: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """
-        Formatear documento para respuesta
+        Formatear documento para incluir _id como string y manejar Decimals
         
         Args:
             document: Documento de MongoDB
             
         Returns:
-            Dict: Documento formateado o None si no hay documento
+            Dict: Documento formateado
         """
-        if not document:
+        if document is None:
             return None
-        
+
         # Convertir ObjectId a string
-        if '_id' in document:
+        if '_id' in document and isinstance(document['_id'], ObjectId):
             document['_id'] = str(document['_id'])
         
+        # Convertir Decimal a float para jsonify (MongoDB no soporta Decimal directamente)
+        for key, value in document.items():
+            if isinstance(value, Decimal):
+                document[key] = float(value)
+            elif isinstance(value, dict):
+                document[key] = self._format_document(value)
+            elif isinstance(value, list):
+                document[key] = [self._format_document(item) if isinstance(item, dict) else item for item in value]
+                
         return document
     
     @abstractmethod
