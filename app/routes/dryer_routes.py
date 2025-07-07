@@ -12,7 +12,7 @@ dryer_bp = Blueprint('dryers', __name__)
 # Instanciar servicios
 dryer_service = DryerService()
 
-@dryer_bp.route('/', methods=['POST'])
+@dryer_bp.route('', methods=['POST'])
 @employee_required
 def create_dryer(current_user):
     """
@@ -58,7 +58,7 @@ def create_dryer(current_user):
         logger.error(f"Error en create dryer endpoint: {e}")
         return error_response('Error interno del servidor', 500)
 
-@dryer_bp.route('/', methods=['GET'])
+@dryer_bp.route('', methods=['GET'])
 @employee_required
 def get_dryers(current_user):
     """

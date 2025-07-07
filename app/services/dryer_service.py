@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, cast
 from app.repositories.dryer_repository import DryerRepository
 from app.repositories.service_cycle_repository import ServiceCycleRepository
 from app.schemas.dryer_schema import (
@@ -39,12 +39,19 @@ class DryerService:
         """
         try:
             # Validar datos según si es creación o actualización
-            if '_id' in dryer_data:
+            data_to_validate = dryer_data.copy()
+            data_to_validate.pop('created_at', None)
+            data_to_validate.pop('updated_at', None)
+            data_to_validate.pop('machine_type', None)
+
+            validated_data: Dict[str, Any]
+
+            if '_id' in data_to_validate:
                 # Actualización
-                validated_data = dryer_update_schema.load(dryer_data)
+                validated_data = cast(Dict[str, Any], dryer_update_schema.load(data_to_validate))
             else:
                 # Creación
-                validated_data = dryer_schema.load(dryer_data)
+                validated_data = cast(Dict[str, Any], dryer_schema.load(data_to_validate))
                 
                 # Verificar que el número de secadora no existe en la tienda
                 existing_dryer = self.dryer_repository.find_by_numero_and_store(
@@ -198,31 +205,20 @@ class DryerService:
         
         Args:
             dryer_id: ID de la secadora
-            status_data: Datos del estado
+            status_data: Nuevo estado (disponible, ocupada, mantenimiento)
             
         Returns:
-            Dict: Resultado de la operación
+            Dict: Datos actualizados de la secadora
         """
         try:
-            # Validar datos de entrada
-            validated_data = dryer_status_schema.load(status_data)
+            # Validar datos de estado
+            validated_status = cast(Dict[str, str], dryer_status_schema.load(status_data))
             
-            # Verificar que la secadora existe
-            dryer = self.dryer_repository.find_by_id(dryer_id)
-            if not dryer:
-                return {
-                    'success': False,
-                    'message': 'Secadora no encontrada'
-                }
+            # Actualizar estado de la secadora
+            dryer = self.dryer_repository.update_estado(dryer_id, validated_status['estado'])
             
-            # Actualizar estado
-            updated_dryer = self.dryer_repository.update_estado(
-                dryer_id,
-                validated_data['estado']
-            )
-            
-            if updated_dryer:
-                dryer_response = dryer_response_schema.dump(updated_dryer)
+            if dryer:
+                dryer_response = dryer_response_schema.dump(dryer)
                 return {
                     'success': True,
                     'message': 'Estado de secadora actualizado exitosamente',

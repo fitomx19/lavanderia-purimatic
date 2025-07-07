@@ -36,7 +36,7 @@ class DryerSchema(Schema):
 class DryerUpdateSchema(Schema):
     """Schema para actualización de secadoras"""
     
-    _id = fields.Str(dump_only=True)
+    _id = fields.Str(required=True, error_messages={'required': 'El ID de la secadora es requerido para actualizar'})
     numero = fields.Integer(validate=validate.Range(min=1, max=99), allow_none=True)
     marca = fields.Str(validate=validate.Length(min=2, max=50), allow_none=True)
     capacidad = fields.Decimal(places=1, validate=validate.Range(min=5.0, max=50.0), allow_none=True)

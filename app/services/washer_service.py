@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, cast
 from app.repositories.washer_repository import WasherRepository
 from app.repositories.service_cycle_repository import ServiceCycleRepository
 from app.schemas.washer_schema import (
@@ -39,12 +39,19 @@ class WasherService:
         """
         try:
             # Validar datos según si es creación o actualización
-            if '_id' in washer_data:
+            data_to_validate = washer_data.copy()
+            data_to_validate.pop('created_at', None)
+            data_to_validate.pop('updated_at', None)
+            data_to_validate.pop('machine_type', None)
+
+            validated_data: Dict[str, Any]
+
+            if '_id' in data_to_validate:
                 # Actualización
-                validated_data = washer_update_schema.load(washer_data)
+                validated_data = cast(Dict[str, Any], washer_update_schema.load(data_to_validate))
             else:
                 # Creación
-                validated_data = washer_schema.load(washer_data)
+                validated_data = cast(Dict[str, Any], washer_schema.load(data_to_validate))
                 
                 # Verificar que el número de lavadora no existe en la tienda
                 existing_washer = self.washer_repository.find_by_numero_and_store(
@@ -198,31 +205,20 @@ class WasherService:
         
         Args:
             washer_id: ID de la lavadora
-            status_data: Datos del estado
+            status_data: Nuevo estado (disponible, ocupada, mantenimiento)
             
         Returns:
-            Dict: Resultado de la operación
+            Dict: Datos actualizados de la lavadora
         """
         try:
-            # Validar datos de entrada
-            validated_data = washer_status_schema.load(status_data)
+            # Validar datos de estado
+            validated_status = cast(Dict[str, str], washer_status_schema.load(status_data))
             
-            # Verificar que la lavadora existe
-            washer = self.washer_repository.find_by_id(washer_id)
-            if not washer:
-                return {
-                    'success': False,
-                    'message': 'Lavadora no encontrada'
-                }
+            # Actualizar estado de la lavadora
+            washer = self.washer_repository.update_estado(washer_id, validated_status['estado'])
             
-            # Actualizar estado
-            updated_washer = self.washer_repository.update_estado(
-                washer_id,
-                validated_data['estado']
-            )
-            
-            if updated_washer:
-                washer_response = washer_response_schema.dump(updated_washer)
+            if washer:
+                washer_response = washer_response_schema.dump(washer)
                 return {
                     'success': True,
                     'message': 'Estado de lavadora actualizado exitosamente',

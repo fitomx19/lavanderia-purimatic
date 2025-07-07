@@ -21,7 +21,7 @@ const DashboardPage = () => {
             <h2>Usuarios</h2>
             <p>Gestionar empleados </p>
           </div>
-          <div className="dashboard-card">
+          <div className="dashboard-card" onClick={() => navigate('/machines')}>
             <h2>Equipo</h2>
             <p>Gestionar lavadoras y secadoras</p>
           </div>

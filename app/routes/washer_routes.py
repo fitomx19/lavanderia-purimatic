@@ -12,7 +12,7 @@ washer_bp = Blueprint('washers', __name__)
 # Instanciar servicios
 washer_service = WasherService()
 
-@washer_bp.route('/', methods=['POST'])
+@washer_bp.route('', methods=['POST'])
 @employee_required
 def create_washer(current_user):
     """
@@ -58,7 +58,7 @@ def create_washer(current_user):
         logger.error(f"Error en create washer endpoint: {e}")
         return error_response('Error interno del servidor', 500)
 
-@washer_bp.route('/', methods=['GET'])
+@washer_bp.route('', methods=['GET'])
 @employee_required
 def get_washers(current_user):
     """
