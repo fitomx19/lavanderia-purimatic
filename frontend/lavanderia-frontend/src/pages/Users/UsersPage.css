@@ -1,24 +1,41 @@
 .users-page-container {
     padding: 20px;
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-light);
+    color: var(--text-color-dark);
+    min-height: calc(100vh - 70px); /* Ajustar para el header */
+}
+
+.users-page-container h1 {
+    font-size: 2.2em;
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    text-align: center;
 }
 
 .users-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+    background-color: var(--background-card);
+    box-shadow: var(--shadow-light);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .users-table th,
 .users-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
+    border: 1px solid var(--border-color);
+    padding: 12px 15px;
     text-align: left;
 }
 
 .users-table th {
-    background-color: #f2f2f2;
-    color: #333;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9em;
 }
 
 .users-table tr:nth-child(even) {
@@ -30,12 +47,17 @@
 }
 
 .users-table button {
-    padding: 5px 10px;
-    margin-right: 5px;
+    padding: 8px 12px;
+    margin-right: 8px;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 0.85em;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.users-table button:hover {
+    transform: translateY(-2px);
 }
 
 .users-table button:first-of-type {
@@ -43,68 +65,85 @@
     color: white;
 }
 
+.users-table button:first-of-type:hover {
+    background-color: #0056b3;
+}
+
 .users-table button:last-of-type {
-    background-color: #dc3545;
+    background-color: var(--accent-color);
     color: white;
 }
 
+.users-table button:last-of-type:hover {
+    background-color: #a02020;
+}
+
 .create-employee-button {
-    background-color: #28a745;
-    color: white;
-    padding: 10px 15px;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    padding: 12px 20px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     margin-bottom: 20px;
     font-size: 1em;
+    transition: background-color 0.3s ease;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .create-employee-button:hover {
-    background-color: #218838;
+    background-color: #0056b3;
 }
 
 .create-employee-form,
 .edit-employee-form {
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+    background-color: var(--background-card);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-medium);
+    margin: 20px auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
+    max-width: 600px;
 }
 
 .create-employee-form h2,
 .edit-employee-form h2 {
     margin-top: 0;
-    color: #333;
+    color: var(--primary-color);
+    text-align: center;
+    font-size: 1.8em;
 }
 
 .create-employee-form input,
 .create-employee-form select,
 .edit-employee-form input,
 .edit-employee-form select {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
     font-size: 1em;
+    background-color: #fcfcfc;
 }
 
 .create-employee-form button,
 .edit-employee-form button {
-    padding: 10px 15px;
+    padding: 12px 20px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     font-size: 1em;
-    margin-top: 5px;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
 }
 
 .create-employee-form button[type="submit"],
 .edit-employee-form button[type="submit"] {
-    background-color: #007bff;
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
 }
 
 .create-employee-form button[type="submit"]:hover,
@@ -118,7 +157,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -126,17 +165,17 @@
 }
 
 .edit-employee-form {
-    background-color: white;
+    background-color: var(--background-card);
     padding: 30px;
     border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-medium);
     width: 90%;
-    max-width: 500px;
+    max-width: 550px;
 }
 
 .edit-employee-form button[type="button"] {
     background-color: #6c757d;
-    color: white;
+    color: var(--text-color-light);
     margin-left: 10px;
 }
 
@@ -146,26 +185,28 @@
 
 .edit-employee-form label {
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    color: var(--text-color-dark);
 }
 
 .pagination-controls {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 20px;
-    gap: 15px;
+    margin-top: 30px;
+    gap: 20px;
+    font-size: 1.1em;
 }
 
 .pagination-controls button {
-    background-color: #007bff;
-    color: white;
-    padding: 8px 15px;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    padding: 10px 18px;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.2s;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
 }
 
 .pagination-controls button:hover:not(:disabled) {
@@ -175,9 +216,57 @@
 .pagination-controls button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .pagination-controls span {
     font-size: 1em;
-    color: #333;
+    color: var(--text-color-dark);
+    font-weight: bold;
+}
+
+/* Media Queries para Responsividad */
+@media (max-width: 768px) {
+    .users-page-container {
+        padding: 15px;
+    }
+
+    .users-page-container h1 {
+        font-size: 1.8em;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 10px;
+        font-size: 0.8em;
+    }
+
+    .users-table button {
+        padding: 6px 10px;
+        margin-right: 4px;
+        font-size: 0.75em;
+    }
+
+    .create-employee-form,
+    .edit-employee-form {
+        padding: 20px;
+        gap: 10px;
+    }
+
+    .create-employee-form h2,
+    .edit-employee-form h2 {
+        font-size: 1.5em;
+    }
+
+    .create-employee-form input,
+    .create-employee-form select,
+    .edit-employee-form input,
+    .edit-employee-form select {
+        padding: 10px;
+    }
+
+    .pagination-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
 }

@@ -150,6 +150,20 @@ class UserClientResponseSchema(Schema):
     is_active = fields.Bool()
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
+    client_cards = fields.List(fields.Nested('CardSchemaForClientResponse'), dump_only=True)
+
+class CardSchemaForClientResponse(Schema):
+    """
+    Schema para la serialización de tarjetas dentro de la respuesta del cliente.
+    """
+    _id = fields.Str()
+    card_number = fields.Str()
+    balance = fields.Decimal(places=2)
+    client_id = fields.Str()
+    created_at = fields.DateTime()
+    is_active = fields.Bool()
+    updated_at = fields.DateTime()
+    last_used = fields.DateTime(allow_none=True)
 
 # Instancias de esquemas para uso en la aplicación
 user_client_schema = UserClientSchema()

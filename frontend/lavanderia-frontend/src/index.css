@@ -1,0 +1,85 @@
+/* Estilos Globales para Lavandería Purimatic */
+
+/* Reset Básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Variables CSS para Colores */
+:root {
+    --primary-color: #00796b; /* Verde oscuro */
+    --primary-light: #e0f7fa; /* Verde claro */
+    --accent-color: #d32f2f; /* Rojo para acciones de peligro/cierre */
+    --text-color-dark: #333333;
+    --text-color-light: #ffffff;
+    --border-color: #cccccc;
+    --background-light: #f4f7f6; /* Fondo general más suave */
+    --background-card: #ffffff;
+    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Tipografía General */
+body {
+    font-family: 'Roboto', 'Arial', sans-serif; /* Puedes importar Roboto desde Google Fonts si quieres */
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text-color-dark);
+    background-color: var(--background-light);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--primary-color);
+    margin-bottom: 0.5em;
+}
+
+/* Estilos para Enlaces y Botones */
+button {
+    font-family: inherit;
+    font-size: 1em;
+    padding: 0.75em 1.5em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Estilos para Formularios */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1em;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 121, 107, 0.2);
+}
+
+/* Estilos de utilidades (opcional, para flexibilidad) */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.card {
+    background-color: var(--background-card);
+    border-radius: 8px;
+    box-shadow: var(--shadow-light);
+    padding: 20px;
+    margin-bottom: 20px;
+} 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getEmployees, deleteEmployee, createEmployee, updateEmployee } from '../../services/employeeService';
+import Header from '../../components/layout/Header';
 import './UsersPage.css';
 
 const UsersPage = () => {
@@ -121,6 +122,7 @@ const UsersPage = () => {
 
   return (
     <div className="users-page-container">
+      <Header />
       <h1>Gestión de Usuarios (Empleados)</h1>
       <button onClick={() => setShowCreateForm(!showCreateForm)} className="create-employee-button">
         {showCreateForm ? 'Cancelar' : 'Agregar Nuevo Empleado'}

@@ -12,7 +12,7 @@ client_bp = Blueprint('clients', __name__)
 # Instanciar servicios
 client_service = ClientService()
 
-@client_bp.route('/', methods=['POST'])
+@client_bp.route('', methods=['POST'])
 @employee_required
 def create_client(current_user):
     """
@@ -59,7 +59,7 @@ def create_client(current_user):
         logger.error(f"Error en create client endpoint: {e}")
         return error_response('Error interno del servidor', 500)
 
-@client_bp.route('/', methods=['GET'])
+@client_bp.route('', methods=['GET'])
 @employee_required
 def get_clients(current_user):
     """

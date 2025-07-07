@@ -2,6 +2,9 @@ from typing import Dict, Any, Optional
 from app.repositories.base_repository import BaseRepository
 from pymongo import IndexModel, ASCENDING
 from bson import ObjectId
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserClientRepository(BaseRepository):
     """
@@ -174,3 +177,104 @@ class UserClientRepository(BaseRepository):
         ]
         
         self.collection.create_indexes(indexes)
+
+    def find_clients_with_card_balance(self, search: Optional[str] = None, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
+        """
+        Obtener lista de clientes con el saldo calculado de las tarjetas asociadas.
+
+        Args:
+            search: Término de búsqueda por nombre.
+            page: Página actual.
+            per_page: Elementos por página.
+
+        Returns:
+            Dict: Clientes encontrados con el saldo de tarjeta calculado y paginación.
+        """
+        pipeline = []
+
+        # 1. Filtro inicial por is_active y opcionalmente por nombre
+        match_criteria: Dict[str, Any] = {'is_active': True}
+        if search:
+            match_criteria['nombre'] = {'$regex': search, '$options': 'i'}
+        pipeline.append({'$match': match_criteria})
+
+        # 2. Lookup para unir con la colección de tarjetas
+        #    'localField' es el _id del cliente (ObjectId)
+        #    'foreignField' es client_id en la colección de tarjetas (String)
+        pipeline.append({
+            '$lookup': {
+                'from': 'cards',
+                'let': { 'clientId': { '$toString': '$_id' } }, # Convertir _id del cliente a String
+                'pipeline': [
+                    {
+                        '$match': {
+                            '$expr': {
+                                '$and': [
+                                    {'$eq': ['$client_id', '$$clientId']},
+                                    {'$eq': ['$is_active', True]} # Considerar solo tarjetas activas
+                                ]
+                            }
+                        }
+                    }
+                ],
+                'as': 'client_cards'
+            }
+        })
+
+        logger.debug(f"Aggregation pipeline: {pipeline}")
+
+        # 3. Sumar el balance de las tarjetas activas
+        pipeline.append({
+            '$addFields': {
+                'saldo_tarjeta_recargable': {
+                    '$sum': {
+                        '$map': {
+                            'input': {
+                                '$filter': {
+                                    'input': '$client_cards',
+                                    'as': 'card',
+                                    'cond': {'$eq': ['$$card.is_active', True]}
+                                }
+                            },
+                            'as': 'active_card',
+                            'in': '$$active_card.balance'
+                        }
+                    }
+                }
+            }
+        })
+
+        # 4. Proyectar campos deseados (todos los del cliente, el saldo calculado y el detalle de las tarjetas)
+        pipeline.append({
+            '$project': {
+                '_id': 1,
+                'nombre': 1,
+                'telefono': 1,
+                'email': 1,
+                'direccion': 1,
+                'is_active': 1,
+                'created_at': 1,
+                'updated_at': 1,
+                'saldo_tarjeta_recargable': {'$toDouble': {'$ifNull': ['$saldo_tarjeta_recargable', 0]}}, # Asegurar que sea float
+                'client_cards': 1 # Incluir el array de tarjetas
+            }
+        })
+
+        # 5. Contar el total de documentos para la paginación
+        count_pipeline = pipeline + [{'$count': 'total'}]
+        total_result = list(self.collection.aggregate(count_pipeline))
+        total_documents = total_result[0]['total'] if total_result else 0
+
+        # 6. Aplicar paginación (skip y limit)
+        pipeline.append({'$skip': (page - 1) * per_page})
+        pipeline.append({'$limit': per_page})
+
+        clients = list(self.collection.aggregate(pipeline))
+
+        return {
+            'documents': clients,
+            'page': page,
+            'per_page': per_page,
+            'total': total_documents,
+            'total_pages': (total_documents + per_page - 1) // per_page
+        }

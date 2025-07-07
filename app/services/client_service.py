@@ -34,8 +34,19 @@ class ClientService:
             # Validar datos según si es creación o actualización
             if '_id' in client_data:
                 # Actualización
-                validated_data = user_client_update_schema.load(client_data)
                 client_id = client_data['_id']
+                
+                # Crear una copia mutable y eliminar _id para la validación del esquema
+                data_for_validation = client_data.copy()
+                del data_for_validation['_id']
+
+                # Cargar y validar datos
+                # Asertar que el resultado de load es un diccionario si no hay ValidationError
+                validated_data = user_client_update_schema.load(data_for_validation)
+                assert isinstance(validated_data, dict)
+                
+                # Añadir _id de vuelta a validated_data para el upsert
+                validated_data['_id'] = client_id 
                 
                 # Verificar que el cliente existe
                 existing_client = self.client_repository.find_by_id(client_id)
@@ -46,14 +57,14 @@ class ClientService:
                     }
                 
                 # Verificar unicidad de campos si se están actualizando
-                if 'email' in validated_data:
+                if 'email' in validated_data and isinstance(validated_data['email'], str):
                     if self.client_repository.email_exists(validated_data['email'], client_id):
                         return {
                             'success': False,
                             'message': 'El email ya existe'
                         }
                 
-                if 'telefono' in validated_data:
+                if 'telefono' in validated_data and isinstance(validated_data['telefono'], str):
                     if self.client_repository.telefono_exists(validated_data['telefono'], client_id):
                         return {
                             'success': False,
@@ -63,6 +74,7 @@ class ClientService:
             else:
                 # Creación
                 validated_data = user_client_schema.load(client_data)
+                assert isinstance(validated_data, dict)
                 
                 # Verificar unicidad de campos
                 if self.client_repository.email_exists(validated_data['email']):
@@ -153,10 +165,7 @@ class ClientService:
             Dict: Lista de clientes
         """
         try:
-            if search:
-                result = self.client_repository.find_by_nombre(search, page, per_page)
-            else:
-                result = self.client_repository.find_active_clients(page, per_page)
+            result = self.client_repository.find_clients_with_card_balance(search, page, per_page)
             
             clients_response = users_client_response_schema.dump(result['documents'])
             
@@ -233,7 +242,8 @@ class ClientService:
         try:
             # Validar datos de entrada
             validated_data = user_client_balance_schema.load(balance_data)
-            
+            assert isinstance(validated_data, dict)
+
             # Verificar que el cliente existe
             client = self.client_repository.find_by_id(client_id)
             if not client:
