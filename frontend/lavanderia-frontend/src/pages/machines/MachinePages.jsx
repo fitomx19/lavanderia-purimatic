@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // import Sidebar from '../../components/layout/Sidebar'; // Importación de Sidebar eliminada
+import Header from '../../components/layout/Header'; // Importar Header
 import { createWasher, getWashersByStoreId, updateWasher, deleteWasher, createDryer, getDryersByStoreId, updateDryer, deleteDryer } from '../../services/machineService';
 import './MachinePages.css';
 
@@ -24,6 +25,8 @@ const MachinePages = () => {
   });
   const [editingWasher, setEditingWasher] = useState(null);
   const [editingDryer, setEditingDryer] = useState(null);
+  const [showAddWasherForm, setShowAddWasherForm] = useState(false);
+  const [showAddDryerForm, setShowAddDryerForm] = useState(false);
 
   const STORE_ID = 'store_001'; // ID de tienda hardcodeado
 
@@ -67,6 +70,7 @@ const MachinePages = () => {
         store_id: 'store_001',
         estado: 'disponible',
       });
+      setShowAddWasherForm(false);
       fetchMachines();
     } catch (err) {
       setError('Error al crear lavadora: ' + (err.message || err.detail));
@@ -85,6 +89,7 @@ const MachinePages = () => {
         store_id: 'store_001',
         estado: 'disponible',
       });
+      setShowAddDryerForm(false);
       fetchMachines();
     } catch (err) {
       setError('Error al crear secadora: ' + (err.message || err.detail));
@@ -144,24 +149,34 @@ const MachinePages = () => {
 
   return (
     <div className="machines-layout">
-      {/* <Sidebar /> Eliminado */}
+      <Header /> {/* Añadir el Header aquí */}
       <div className="machines-content">
         <h1>Gestión de Máquinas</h1>
 
         <section className="machines-section">
           <h2>Lavadoras</h2>
-          <form onSubmit={handleCreateWasher} className="machine-form">
-            <h3>Agregar Nueva Lavadora</h3>
-            <input type="text" name="marca" placeholder="Marca" value={washerFormData.marca} onChange={handleWasherChange} required />
-            <input type="number" name="capacidad" placeholder="Capacidad" value={washerFormData.capacidad} onChange={handleWasherChange} required />
-            <input type="number" name="numero" placeholder="Número" value={washerFormData.numero} onChange={handleWasherChange} required />
-            <select name="estado" value={washerFormData.estado} onChange={handleWasherChange}>
-              <option value="disponible">Disponible</option>
-              <option value="ocupada">Ocupada</option>
-              <option value="mantenimiento">Mantenimiento</option>
-            </select>
-            <button type="submit">Agregar Lavadora</button>
-          </form>
+          {!showAddWasherForm && (
+            <button onClick={() => setShowAddWasherForm(true)} className="toggle-add-form-button">
+              Agregar Nueva Lavadora
+            </button>
+          )}
+          {showAddWasherForm && (
+            <form onSubmit={handleCreateWasher} className="machine-form">
+              <h3>Agregar Nueva Lavadora</h3>
+              <input type="text" name="marca" placeholder="Marca" value={washerFormData.marca} onChange={handleWasherChange} required />
+              <input type="number" name="capacidad" placeholder="Capacidad" value={washerFormData.capacidad} onChange={handleWasherChange} required />
+              <input type="number" name="numero" placeholder="Número" value={washerFormData.numero} onChange={handleWasherChange} required />
+              <select name="estado" value={washerFormData.estado} onChange={handleWasherChange}>
+                <option value="disponible">Disponible</option>
+                <option value="ocupada">Ocupada</option>
+                <option value="mantenimiento">Mantenimiento</option>
+              </select>
+              <div className="form-actions">
+                <button type="submit">Agregar Lavadora</button>
+                <button type="button" onClick={() => setShowAddWasherForm(false)} className="cancel-button">Cancelar</button>
+              </div>
+            </form>
+          )}
 
           <div className="machine-list">
             {washers.length > 0 ? (
@@ -202,18 +217,28 @@ const MachinePages = () => {
 
         <section className="machines-section">
           <h2>Secadoras</h2>
-          <form onSubmit={handleCreateDryer} className="machine-form">
-            <h3>Agregar Nueva Secadora</h3>
-            <input type="text" name="marca" placeholder="Marca" value={dryerFormData.marca} onChange={handleDryerChange} required />
-            <input type="number" name="capacidad" placeholder="Capacidad" value={dryerFormData.capacidad} onChange={handleDryerChange} required />
-            <input type="number" name="numero" placeholder="Número" value={dryerFormData.numero} onChange={handleDryerChange} required />
-            <select name="estado" value={dryerFormData.estado} onChange={handleDryerChange}>
-              <option value="disponible">Disponible</option>
-              <option value="ocupada">Ocupada</option>
-              <option value="mantenimiento">Mantenimiento</option>
-            </select>
-            <button type="submit">Agregar Secadora</button>
-          </form>
+          {!showAddDryerForm && (
+            <button onClick={() => setShowAddDryerForm(true)} className="toggle-add-form-button">
+              Agregar Nueva Secadora
+            </button>
+          )}
+          {showAddDryerForm && (
+            <form onSubmit={handleCreateDryer} className="machine-form">
+              <h3>Agregar Nueva Secadora</h3>
+              <input type="text" name="marca" placeholder="Marca" value={dryerFormData.marca} onChange={handleDryerChange} required />
+              <input type="number" name="capacidad" placeholder="Capacidad" value={dryerFormData.capacidad} onChange={handleDryerChange} required />
+              <input type="number" name="numero" placeholder="Número" value={dryerFormData.numero} onChange={handleDryerChange} required />
+              <select name="estado" value={dryerFormData.estado} onChange={handleDryerChange}>
+                <option value="disponible">Disponible</option>
+                <option value="ocupada">Ocupada</option>
+                <option value="mantenimiento">Mantenimiento</option>
+              </select>
+              <div className="form-actions">
+                <button type="submit">Agregar Secadora</button>
+                <button type="button" onClick={() => setShowAddDryerForm(false)} className="cancel-button">Cancelar</button>
+              </div>
+            </form>
+          )}
 
           <div className="machine-list">
             {dryers.length > 0 ? (
