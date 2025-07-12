@@ -12,7 +12,7 @@ product_bp = Blueprint('products', __name__)
 # Instanciar servicios
 product_service = ProductService()
 
-@product_bp.route('/', methods=['POST'])
+@product_bp.route('', methods=['POST'])
 @employee_required
 def create_product(current_user):
     """
@@ -58,7 +58,7 @@ def create_product(current_user):
         logger.error(f"Error en create product endpoint: {e}")
         return error_response('Error interno del servidor', 500)
 
-@product_bp.route('/', methods=['GET'])
+@product_bp.route('', methods=['GET'])
 @employee_required
 def get_products(current_user):
     """

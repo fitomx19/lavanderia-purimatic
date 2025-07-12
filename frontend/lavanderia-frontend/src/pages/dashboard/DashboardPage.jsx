@@ -25,13 +25,17 @@ const DashboardPage = () => {
             <h2>Equipo</h2>
             <p>Gestionar lavadoras y secadoras</p>
           </div>
-          <div className="dashboard-card">
+          <div className="dashboard-card" onClick={() => navigate('/productos')}>
             <h2>Productos</h2>
             <p>Gestionar productos disponibles</p>
           </div>
           <div className="dashboard-card">
             <h2>Ventas</h2>
             <p>Ver historial de ventas</p>
+          </div>
+          <div className="dashboard-card" onClick={() => navigate('/service-cycles')}>
+            <h2>Ciclos de servicio</h2>
+            <p>Gestionar ciclos de servicio</p>
           </div>
           <div className="dashboard-card" onClick={() => navigate('/clients')}>
             <h2>Clientes</h2>

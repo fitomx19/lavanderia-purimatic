@@ -36,7 +36,7 @@ class ProductSchema(Schema):
 class ProductUpdateSchema(Schema):
     """Schema para actualización de productos"""
     
-    _id = fields.Str(dump_only=True)
+    _id = fields.Str()
     nombre = fields.Str(validate=validate.Length(min=2, max=100), allow_none=True)
     descripcion = fields.Str(validate=validate.Length(max=500), allow_none=True)
     precio = fields.Decimal(places=2, validate=validate.Range(min=0), allow_none=True)

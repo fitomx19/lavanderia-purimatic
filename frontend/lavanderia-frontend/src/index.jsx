@@ -6,6 +6,8 @@ import DashboardPage from './pages/dashboard/DashboardPage'; // Lo crearemos en 
 import UsersPage from './pages/Users/UsersPage'; // Importar UsersPage
 import ClientsPage from './pages/clients/ClientsPage'; // Importar ClientsPage
 import MachinePages from './pages/machines/MachinePages'; // Importar MachinePages
+import ProductosPages from './pages/productos/ProductosPages'; // Importar ProductosPages
+import ServicesPages from './pages/CycleServices/ServicesPages'; // Importar ServicesPages
 import './index.css'; // Importar los estilos globales
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -18,6 +20,8 @@ root.render(
         <Route path="/users" element={<UsersPage />} /> {/* Añadir la ruta para Usuarios */}
         <Route path="/clients" element={<ClientsPage />} /> {/* Añadir la ruta para Clientes */}
         <Route path="/machines" element={<MachinePages />} /> {/* Añadir la ruta para Máquinas */}
+        <Route path="/productos" element={<ProductosPages />} /> {/* Añadir la ruta para Productos */}
+        <Route path="/service-cycles" element={<ServicesPages />} /> {/* Añadir la ruta para Ciclos de Servicio */}
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
