@@ -104,6 +104,34 @@ export const getDryersByStoreId = async (storeId, page = 1, per_page = 10) => {
   }
 };
 
+export const getAllActiveWashers = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_BASE_URL}/washers/all-active`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al obtener todas las lavadoras activas');
+  }
+};
+
+export const getAllActiveDryers = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_BASE_URL}/dryers/all-active`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al obtener todas las secadoras activas');
+  }
+};
+
 export const updateDryer = async (id, dryerData) => {
   try {
     const token = getToken();

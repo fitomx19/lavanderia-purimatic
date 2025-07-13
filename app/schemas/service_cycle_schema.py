@@ -1,5 +1,6 @@
 from marshmallow import Schema, fields, validate, validates, ValidationError
 from typing import Dict, Any
+from bson import ObjectId
 
 class ServiceCycleSchema(Schema):
     """
@@ -18,7 +19,7 @@ class ServiceCycleSchema(Schema):
     )
     service_type = fields.Str(
         required=True,
-        validate=validate.OneOf(['lavado', 'secado', 'combo']),
+        validate=validate.OneOf(['lavado', 'secado', 'combo', 'encargo_lavado', 'encargo_secado', 'mixto', 'mixto_encargo']),
         error_messages={'required': 'El tipo de servicio es requerido'}
     )
     duration_minutes = fields.Int(
@@ -32,36 +33,18 @@ class ServiceCycleSchema(Schema):
         validate=validate.Range(min=0.01, max=1000),
         error_messages={'required': 'El precio es requerido'}
     )
-    machine_types_allowed = fields.List(
-        fields.Str(validate=validate.OneOf(['chica', 'grande', 'secadora'])),
+    allowed_machines = fields.List(
+        fields.Nested({
+            '_id': fields.Str(required=True, validate=lambda x: ObjectId.is_valid(x)),
+            'name': fields.Str(required=True)
+        }),
         required=True,
-        error_messages={'required': 'Los tipos de máquina permitidos son requeridos'}
+        error_messages={'required': 'Los IDs de máquina permitidos son requeridos'}
     )
     is_active = fields.Bool(missing=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     
-    @validates('machine_types_allowed')
-    def validate_machine_types(self, value: list) -> None:
-        """
-        Validar tipos de máquina permitidos
-        
-        Args:
-            value: Lista de tipos de máquina
-            
-        Raises:
-            ValidationError: Si la lista está vacía o no es válida
-        """
-        if not value or len(value) == 0:
-            raise ValidationError('Debe especificar al menos un tipo de máquina')
-        
-        # Validar compatibilidad con tipo de servicio
-        service_type = self.context.get('service_type')
-        if service_type == 'lavado' and 'secadora' in value:
-            raise ValidationError('El servicio de lavado no puede usar secadoras')
-        elif service_type == 'secado' and ('chica' in value or 'grande' in value):
-            raise ValidationError('El servicio de secado solo puede usar secadoras')
-
 class ServiceCycleUpdateSchema(Schema):
     """
     Schema para actualización de ciclos de servicio
@@ -77,7 +60,7 @@ class ServiceCycleUpdateSchema(Schema):
         allow_none=True
     )
     service_type = fields.Str(
-        validate=validate.OneOf(['lavado', 'secado', 'combo']),
+        validate=validate.OneOf(['lavado', 'secado', 'combo', 'encargo_lavado', 'encargo_secado', 'mixto', 'mixto_encargo']),
         allow_none=True
     )
     duration_minutes = fields.Int(
@@ -89,8 +72,11 @@ class ServiceCycleUpdateSchema(Schema):
         validate=validate.Range(min=0.01, max=1000),
         allow_none=True
     )
-    machine_types_allowed = fields.List(
-        fields.Str(validate=validate.OneOf(['chica', 'grande', 'secadora'])),
+    allowed_machines = fields.List(
+        fields.Nested({
+            '_id': fields.Str(required=True, validate=lambda x: ObjectId.is_valid(x)),
+            'name': fields.Str(required=True)
+        }),
         allow_none=True
     )
     is_active = fields.Bool(allow_none=True)
@@ -108,7 +94,12 @@ class ServiceCycleResponseSchema(Schema):
     service_type = fields.Str()
     duration_minutes = fields.Int()
     price = fields.Decimal(places=2)
-    machine_types_allowed = fields.List(fields.Str())
+    allowed_machines = fields.List(
+        fields.Nested({
+            '_id': fields.Str(),
+            'name': fields.Str()
+        })
+    )
     is_active = fields.Bool()
     created_at = fields.DateTime()
     updated_at = fields.DateTime()

@@ -446,6 +446,33 @@ def validate_cycle_compatibility(current_user, washer_id, cycle_id):
         logger.error(f"Error en validate cycle compatibility endpoint: {e}")
         return error_response('Error interno del servidor', 500)
 
+@washer_bp.route('/all-active', methods=['GET'])
+@employee_required
+def get_all_active_washers(current_user):
+    """
+    Obtener todas las lavadoras activas sin importar su estado.
+    
+    Headers:
+        Authorization: Bearer <token>
+        
+    Returns:
+        JSON con lista de lavadoras activas.
+    """
+    try:
+        result = washer_service.get_all_active_washers()
+        
+        if result['success']:
+            return success_response(
+                data=result['data'],
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 500)
+            
+    except Exception as e:
+        logger.error(f"Error en get_all_active_washers endpoint: {e}")
+        return error_response('Error interno del servidor', 500)
+
 # Manejador de errores para el blueprint
 @washer_bp.errorhandler(400)
 def bad_request(error):

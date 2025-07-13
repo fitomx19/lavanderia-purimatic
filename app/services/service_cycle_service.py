@@ -6,6 +6,8 @@ from app.schemas.service_cycle_schema import (
     service_cycle_response_schema,
     service_cycles_response_schema
 )
+from app.services.washer_service import WasherService
+from app.services.dryer_service import DryerService
 from marshmallow import ValidationError
 import logging
 
@@ -18,7 +20,46 @@ class ServiceCycleService:
     
     def __init__(self):
         self.service_cycle_repository = ServiceCycleRepository()
+        self.washer_service = WasherService()
+        self.dryer_service = DryerService()
     
+    def _validate_allowed_machines(self, allowed_machines: list) -> Dict[str, Any]:
+        """
+        Valida que los IDs de máquina en allowed_machines existan y estén activos,
+        y que el nombre proporcionado coincida.
+        """
+        if not allowed_machines:
+            return {'success': False, 'message': 'Se deben especificar IDs y nombres de máquinas permitidas.'}
+
+        for machine_data in allowed_machines:
+            machine_id = machine_data.get('_id')
+            machine_name = machine_data.get('name')
+
+            if not machine_id or not machine_name:
+                return {'success': False, 'message': 'Cada máquina en allowed_machines debe tener _id y name.'}
+
+            washer_result = self.washer_service.get_washer_by_id(machine_id)
+            dryer_result = self.dryer_service.get_dryer_by_id(machine_id)
+
+            found_machine = None
+            if washer_result['success']:
+                found_machine = washer_result['data']
+            elif dryer_result['success']:
+                found_machine = dryer_result['data']
+
+            if not found_machine:
+                return {'success': False, 'message': f'Máquina con ID {machine_id} no encontrada.'}
+
+            if not found_machine.get('is_active', False):
+                return {'success': False, 'message': f'Máquina con ID {machine_id} no está activa.'}
+            
+            # Validar que el nombre proporcionado coincida con el número de la máquina
+            # Asumimos que el 'name' en allowed_machines debe ser el número de la máquina para identificación
+            if str(found_machine.get('numero')) != machine_name:
+                return {'success': False, "message": f"El nombre proporcionado para la máquina {machine_id} ({machine_name}) no coincide con el número de la máquina ({found_machine.get('numero')})."}
+                
+        return {'success': True, 'message': 'Máquinas validadas correctamente.'}
+
     def create_or_update_cycle(self, cycle_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Crear o actualizar ciclo de servicio usando UPSERT
@@ -77,6 +118,12 @@ class ServiceCycleService:
                     'message': 'Error en validación de datos'
                 }
             
+            # Validar las máquinas permitidas por ID
+            if 'allowed_machines' in validated_data and validated_data['allowed_machines']:
+                machine_validation_result = self._validate_allowed_machines(validated_data['allowed_machines'])
+                if not machine_validation_result['success']:
+                    return machine_validation_result
+
             # Realizar upsert
             cycle = self.service_cycle_repository.upsert(validated_data)
             
@@ -180,7 +227,7 @@ class ServiceCycleService:
         Obtener ciclos por tipo de servicio
         
         Args:
-            service_type: Tipo de servicio (lavado, secado, combo)
+            service_type: Tipo de servicio (lavado, secado, combo, encargo_lavado, encargo_secado, mixto, mixto_encargo)
             
         Returns:
             Dict: Lista de ciclos del tipo especificado
@@ -197,33 +244,6 @@ class ServiceCycleService:
             
         except Exception as e:
             logger.error(f"Error al obtener ciclos por tipo: {e}")
-            return {
-                'success': False,
-                'message': 'Error interno del servidor'
-            }
-    
-    def get_cycles_by_machine_type(self, machine_type: str) -> Dict[str, Any]:
-        """
-        Obtener ciclos compatibles con un tipo de máquina
-        
-        Args:
-            machine_type: Tipo de máquina (chica, grande, secadora)
-            
-        Returns:
-            Dict: Lista de ciclos compatibles
-        """
-        try:
-            cycles = self.service_cycle_repository.find_by_machine_type(machine_type)
-            cycles_response = service_cycles_response_schema.dump(cycles)
-            
-            return {
-                'success': True,
-                'message': f'Ciclos compatibles con máquina {machine_type} obtenidos exitosamente',
-                'data': cycles_response
-            }
-            
-        except Exception as e:
-            logger.error(f"Error al obtener ciclos por máquina: {e}")
             return {
                 'success': False,
                 'message': 'Error interno del servidor'
@@ -272,96 +292,15 @@ class ServiceCycleService:
                 'message': 'Error interno del servidor'
             }
     
-    def validate_cycle_for_machine(self, cycle_id: str, machine_type: str) -> Dict[str, Any]:
-        """
-        Validar si un ciclo es compatible con un tipo de máquina
-        
-        Args:
-            cycle_id: ID del ciclo
-            machine_type: Tipo de máquina
-            
-        Returns:
-            Dict: Resultado de la validación
-        """
-        try:
-            return self.service_cycle_repository.validate_cycle_for_machine(cycle_id, machine_type)
-            
-        except Exception as e:
-            logger.error(f"Error en validación de ciclo: {e}")
-            return {
-                'valid': False,
-                'message': 'Error interno del servidor'
-            }
-    
     def initialize_default_cycles(self) -> Dict[str, Any]:
         """
-        Inicializar ciclos de servicio predefinidos
+        Inicializar ciclos de servicio predefinidos (eliminado el uso de tipos genéricos)
         
         Returns:
             Dict: Resultado de la inicialización
         """
-        try:
-            default_cycles = [
-                {
-                    'name': 'Lavado Chico',
-                    'description': 'Ciclo de lavado para máquinas chicas',
-                    'service_type': 'lavado',
-                    'duration_minutes': 30,
-                    'price': 25.00,
-                    'machine_types_allowed': ['chica']
-                },
-                {
-                    'name': 'Lavado Grande',
-                    'description': 'Ciclo de lavado para máquinas grandes',
-                    'service_type': 'lavado',
-                    'duration_minutes': 45,
-                    'price': 35.00,
-                    'machine_types_allowed': ['grande']
-                },
-                {
-                    'name': 'Secado',
-                    'description': 'Ciclo de secado estándar',
-                    'service_type': 'secado',
-                    'duration_minutes': 30,
-                    'price': 20.00,
-                    'machine_types_allowed': ['secadora']
-                },
-                {
-                    'name': 'Lavado + Secado Chico',
-                    'description': 'Combo completo para máquinas chicas',
-                    'service_type': 'combo',
-                    'duration_minutes': 60,
-                    'price': 40.00,
-                    'machine_types_allowed': ['chica', 'secadora']
-                },
-                {
-                    'name': 'Lavado + Secado Grande',
-                    'description': 'Combo completo para máquinas grandes',
-                    'service_type': 'combo',
-                    'duration_minutes': 75,
-                    'price': 50.00,
-                    'machine_types_allowed': ['grande', 'secadora']
-                }
-            ]
-            
-            created_cycles = []
-            for cycle_data in default_cycles:
-                # Solo crear si no existe
-                existing = self.service_cycle_repository.find_by_name(cycle_data['name'])
-                if not existing:
-                    result = self.create_or_update_cycle(cycle_data)
-                    if result['success']:
-                        created_cycles.append(result['data'])
-            
-            return {
-                'success': True,
-                'message': f'Ciclos predefinidos inicializados: {len(created_cycles)} creados',
-                'data': created_cycles
-            }
-            
-        except Exception as e:
-            logger.error(f"Error al inicializar ciclos predefinidos: {e}")
-            return {
-                'success': False,
-                'message': 'Error interno del servidor'
-            } 
+        return {
+            'success': True,
+            'message': 'La inicialización de ciclos por defecto con tipos de máquina genéricos ha sido eliminada. Por favor, cree ciclos con IDs de máquina específicos.',
+            'data': []
+        } 

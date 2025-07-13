@@ -199,6 +199,29 @@ class DryerService:
                 'message': 'Error interno del servidor'
             }
     
+    def get_all_active_dryers(self) -> Dict[str, Any]:
+        """
+        Obtener todas las secadoras activas sin importar su estado.
+        
+        Returns:
+            Dict: Lista de secadoras activas.
+        """
+        try:
+            dryers = self.dryer_repository.find_all_active_dryers()
+            dryers_response = dryers_response_schema.dump(dryers)
+            
+            return {
+                'success': True,
+                'message': 'Secadoras activas obtenidas exitosamente',
+                'data': dryers_response
+            }
+        except Exception as e:
+            logger.error(f"Error al obtener todas las secadoras activas: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno del servidor al obtener secadoras activas'
+            }
+
     def update_dryer_status(self, dryer_id: str, status_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Actualizar estado de la secadora

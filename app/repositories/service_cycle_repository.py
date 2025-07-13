@@ -59,25 +59,6 @@ class ServiceCycleRepository(BaseRepository):
         )
         return result['documents']
     
-    def find_by_machine_type(self, machine_type: str) -> list:
-        """
-        Encontrar ciclos compatibles con un tipo de máquina
-        
-        Args:
-            machine_type: Tipo de máquina (chica, grande, secadora)
-            
-        Returns:
-            list: Lista de ciclos compatibles
-        """
-        result = self.find_many(
-            filter_criteria={
-                'machine_types_allowed': machine_type,
-                'is_active': True
-            },
-            per_page=100
-        )
-        return result['documents']
-    
     def find_active_cycles(self, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
         """
         Encontrar todos los ciclos activos
@@ -118,31 +99,6 @@ class ServiceCycleRepository(BaseRepository):
         
         return self.find_one(filter_criteria) is not None
     
-    def validate_cycle_for_machine(self, cycle_id: str, machine_type: str) -> Dict[str, Any]:
-        """
-        Validar si un ciclo es compatible con un tipo de máquina
-        
-        Args:
-            cycle_id: ID del ciclo
-            machine_type: Tipo de máquina
-            
-        Returns:
-            Dict: Resultado de la validación
-        """
-        cycle = self.find_by_id(cycle_id)
-        
-        if not cycle:
-            return {'valid': False, 'message': 'Ciclo no encontrado'}
-        
-        if not cycle.get('is_active', False):
-            return {'valid': False, 'message': 'Ciclo inactivo'}
-        
-        machine_types_allowed = cycle.get('machine_types_allowed', [])
-        if machine_type not in machine_types_allowed:
-            return {'valid': False, 'message': f'Ciclo no compatible con máquina tipo {machine_type}'}
-        
-        return {'valid': True, 'message': 'Ciclo válido para la máquina'}
-    
     def get_cycle_price(self, cycle_id: str) -> Optional[float]:
         """
         Obtener precio de un ciclo
@@ -165,7 +121,6 @@ class ServiceCycleRepository(BaseRepository):
         indexes = [
             IndexModel([('name', ASCENDING)], unique=True),
             IndexModel([('service_type', ASCENDING)]),
-            IndexModel([('machine_types_allowed', ASCENDING)]),
             IndexModel([('is_active', ASCENDING)]),
             IndexModel([('created_at', ASCENDING)])
         ]

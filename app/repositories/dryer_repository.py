@@ -102,7 +102,20 @@ class DryerRepository(BaseRepository):
             Dict: Secadoras disponibles
         """
         return self.find_by_estado('disponible', store_id, page, per_page)
-    
+
+    def find_all_active_dryers(self) -> list:
+        """
+        Encontrar todas las secadoras activas sin importar su estado.
+        
+        Returns:
+            list: Lista de todas las secadoras activas.
+        """
+        result = self.find_many(
+            filter_criteria={'is_active': True},
+            per_page=1000 # Un número grande para obtener todos
+        )
+        return result['documents']
+
     def update_estado(self, dryer_id: str, estado: str) -> Optional[Dict[str, Any]]:
         """
         Actualizar estado de la secadora

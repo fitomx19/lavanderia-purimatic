@@ -199,6 +199,29 @@ class WasherService:
                 'message': 'Error interno del servidor'
             }
     
+    def get_all_active_washers(self) -> Dict[str, Any]:
+        """
+        Obtener todas las lavadoras activas sin importar su estado.
+        
+        Returns:
+            Dict: Lista de lavadoras activas.
+        """
+        try:
+            washers = self.washer_repository.find_all_active_washers()
+            washers_response = washers_response_schema.dump(washers)
+            
+            return {
+                'success': True,
+                'message': 'Lavadoras activas obtenidas exitosamente',
+                'data': washers_response
+            }
+        except Exception as e:
+            logger.error(f"Error al obtener todas las lavadoras activas: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno del servidor al obtener lavadoras activas'
+            }
+
     def update_washer_status(self, washer_id: str, status_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Actualizar estado de la lavadora
