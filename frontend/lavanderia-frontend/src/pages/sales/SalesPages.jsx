@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../components/layout/Sidebar';
+import Sidebar from '../../components/layout/Sidebar'; // Re-agregado el componente Sidebar
 import Header from '../../components/layout/Header'; // Importar Header
 import { createSale, getSales, completeSale, deactivateMachines } from '../../services/salesService';
 import { getProducts } from '../../services/productoService';
@@ -13,7 +13,7 @@ const SalesPage = () => {
   const [machines, setMachines] = useState([]);
   const [serviceCycles, setServiceCycles] = useState([]);
   const [newSale, setNewSale] = useState({
-    store_id: '65239f60a92d4f5f5f5f5f5f', // TODO: Obtener dinámicamente o de configuración
+    store_id: '65239f60a92d4f5f5f5f5f5f',
     items: {
       products: [],
       services: []
@@ -30,14 +30,22 @@ const SalesPage = () => {
         setSales(salesData.data);
 
         const productsData = await getProducts();
-        setProducts(productsData.data.products || []); // Asegurar que products sea un array
+        setProducts(productsData.data.products || []);
 
         const washersData = await getAllActiveWashers();
         const dryersData = await getAllActiveDryers();
-        setMachines([...washersData.data, ...dryersData.data]);
+
+        // Asegurar que el tipo de máquina esté presente para el filtrado
+        const allMachines = [
+          ...(washersData.data || []).map(washer => ({ ...washer, tipo: 'lavadora' })),
+          ...(dryersData.data || []).map(dryer => ({ ...dryer, tipo: 'secadora' }))
+        ];
+        setMachines(allMachines);
+        console.log('All Machines State:', allMachines); // Debugging line
 
         const serviceCyclesData = await getServiceCycles();
-        setServiceCycles(serviceCyclesData.data.data || []); // Asegurar que serviceCycles sea un array
+        setServiceCycles(serviceCyclesData.data.data || []);
+        console.log('Service Cycles State:', serviceCyclesData.data.data || []); // Debugging line
 
       } catch (err) {
         setError(err.message);
@@ -51,7 +59,29 @@ const SalesPage = () => {
   const handleCreateSale = async (e) => {
     e.preventDefault();
     try {
-      const response = await createSale(newSale);
+      // Reestructurar los items de servicio para el backend
+      const itemsToSend = [
+        ...newSale.items.products,
+        ...newSale.items.services.flatMap(svc => {
+          if (svc.service_type === 'mixto') {
+            // Si es mixto, crea dos entradas separadas para lavadora y secadora
+            return [
+              { service_cycle_id: svc.service_cycle_id, machine_id: svc.washer_id },
+              { service_cycle_id: svc.service_cycle_id, machine_id: svc.dryer_id }
+            ];
+          } else {
+            // Para otros tipos, un solo item de servicio
+            return [{ service_cycle_id: svc.service_cycle_id, machine_id: svc.machine_id }];
+          }
+        })
+      ];
+
+      const saleDataToSend = {
+        ...newSale,
+        items: itemsToSend // Usar la lista reestructurada de items
+      };
+
+      const response = await createSale(saleDataToSend);
       alert(response.message);
       const updatedSales = await getSales();
       setSales(updatedSales.data);
@@ -59,7 +89,7 @@ const SalesPage = () => {
         store_id: '65239f60a92d4f5f5f5f5f5f',
         items: {
           products: [],
-          services: []
+          services: [] // Mantener la estructura para el frontend
         },
         payment_methods: []
       });
@@ -101,11 +131,12 @@ const SalesPage = () => {
   };
 
   const handleAddServiceItem = () => {
+    // Añadir un nuevo item de servicio con campos para lavadora y secadora para ciclos mixtos
     setNewSale(prev => ({
       ...prev,
       items: {
         ...prev.items,
-        services: [...prev.items.services, { service_cycle_id: '', machine_id: '' }]
+        services: [...prev.items.services, { service_cycle_id: '', machine_id: '', service_type: '', washer_id: '', dryer_id: '' }]
       }
     }));
   };
@@ -114,6 +145,19 @@ const SalesPage = () => {
     const updatedServices = newSale.items.services.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
     );
+
+    // Si se cambia el service_cycle_id, actualiza el service_type del item
+    if (field === 'service_cycle_id') {
+      const selectedCycle = serviceCycles.find(cycle => cycle._id === value);
+      if (selectedCycle) {
+        updatedServices[index].service_type = selectedCycle.service_type;
+        // Limpiar los IDs de máquina si se cambia el tipo de servicio
+        updatedServices[index].machine_id = '';
+        updatedServices[index].washer_id = '';
+        updatedServices[index].dryer_id = '';
+      }
+    }
+
     setNewSale(prev => ({
       ...prev,
       items: {
@@ -145,9 +189,9 @@ const SalesPage = () => {
 
   return (
     <div className="sales-layout">
-      <Sidebar /> {/* Re-agregado el componente Sidebar */}
+     
       <div className="main-content">
-        <Header /> {/* Agregado el componente Header */}
+        <Header />
         <div className="sales-content">
           <h1>Gestión de Ventas</h1>
 
@@ -203,20 +247,54 @@ const SalesPage = () => {
                         </option>
                       ))}
                     </select>
-                    <select
-                      value={item.machine_id}
-                      onChange={(e) => handleServiceItemChange(index, 'machine_id', e.target.value)}
-                      required
-                    >
-                      <option value="">Selecciona una máquina disponible</option>
-                      {machines
-                        .filter(machine => machine.estado === 'disponible')
-                        .map(machine => (
-                          <option key={machine._id} value={machine._id}>
-                            {machine.numero} ({machine.marca} - {machine.tipo})
-                          </option>
-                        ))}
-                    </select>
+
+                    {item.service_type === 'mixto' ? (
+                      <>
+                        <select
+                          value={item.washer_id}
+                          onChange={(e) => handleServiceItemChange(index, 'washer_id', e.target.value)}
+                          required
+                        >
+                          <option value="">Selecciona una lavadora</option>
+                          {machines
+                            .filter(machine => machine.tipo === 'lavadora' && machine.estado === 'disponible')
+                            .map(machine => (
+                              <option key={machine._id} value={machine._id}>
+                                Lavadora {machine.numero}
+                              </option>
+                            ))}
+                        </select>
+                        <select
+                          value={item.dryer_id}
+                          onChange={(e) => handleServiceItemChange(index, 'dryer_id', e.target.value)}
+                          required
+                        >
+                          <option value="">Selecciona una secadora</option>
+                          {machines
+                            .filter(machine => machine.tipo === 'secadora' && machine.estado === 'disponible')
+                            .map(machine => (
+                              <option key={machine._id} value={machine._id}>
+                                Secadora {machine.numero}
+                              </option>
+                            ))}
+                        </select>
+                      </>
+                    ) : (
+                      <select
+                        value={item.machine_id}
+                        onChange={(e) => handleServiceItemChange(index, 'machine_id', e.target.value)}
+                        required
+                      >
+                        <option value="">Selecciona una máquina disponible</option>
+                        {machines
+                          .filter(machine => machine.estado === 'disponible')
+                          .map(machine => (
+                            <option key={machine._id} value={machine._id}>
+                              {machine.numero} ({machine.marca} - {machine.tipo})
+                            </option>
+                          ))}
+                      </select>
+                    )}
                   </div>
                 ))}
                 <button type="button" onClick={handleAddServiceItem} className="add-item-button">Añadir Servicio</button>
