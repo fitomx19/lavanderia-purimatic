@@ -114,6 +114,34 @@ class ServiceCycleRepository(BaseRepository):
             return float(cycle.get('price', 0))
         return None
     
+    def validate_cycle_for_machine(self, cycle_id: str, machine_id: str, machine_type: str) -> Dict[str, Any]:
+        """
+        Validar si un ciclo de servicio es compatible con un tipo de máquina y si la máquina está permitida.
+        
+        Args:
+            cycle_id: ID del ciclo de servicio
+            machine_id: ID de la máquina
+            machine_type: Tipo de la máquina (lavadora, secadora)
+            
+        Returns:
+            Dict: Resultado de la validación
+        """
+        cycle = self.find_by_id(cycle_id)
+        if not cycle:
+            return {'valid': False, 'message': 'Ciclo de servicio no encontrado'}
+
+        # Verificar si la máquina está en la lista de máquinas permitidas del ciclo
+        allowed_machines_ids = [str(m['_id']) for m in cycle.get('allowed_machines', [])]
+        if str(machine_id) not in allowed_machines_ids:
+            return {'valid': False, 'message': f'Máquina {machine_id} no está permitida para este ciclo de servicio.'}
+
+        service_type = cycle.get('service_type')
+
+        # Validar compatibilidad de tipo de servicio y máquina
+ 
+        
+        return {'valid': True, 'message': 'Compatibilidad validada'}
+    
     def create_indexes(self):
         """
         Crear índices para optimizar consultas

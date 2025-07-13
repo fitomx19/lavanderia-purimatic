@@ -49,6 +49,13 @@ class SaleService:
                     'message': 'Error en validación de datos'
                 }
             
+            # Asegurar que el store_id esté presente
+            if 'store_id' not in validated_data:
+                return {
+                    'success': False,
+                    'message': 'El ID de la tienda (store_id) es requerido'
+                }
+
             # Enriquecer datos con precios y validaciones
             enriched_data = self._enrich_sale_data(validated_data)
             if not enriched_data['success']:
@@ -78,6 +85,13 @@ class SaleService:
                     self.sale_repository.update_sale_status(sale['_id'], 'cancelled')
                     return payment_result
                 
+                # Actualizar stock de productos
+                product_update_result = self._update_product_stock(sale_data_enriched['items'].get('products', []))
+                if not product_update_result['success']:
+                    # Considerar revertir venta si falla el stock (ej: devolver saldo de tarjetas)
+                    self.sale_repository.update_sale_status(sale['_id'], 'cancelled')
+                    return product_update_result
+
                 sale_response = sale_response_schema.dump(sale)
                 return {
                     'success': True,
@@ -180,6 +194,7 @@ class SaleService:
                 machine_type = machine.get('tipo', '')
                 validation = self.service_cycle_repository.validate_cycle_for_machine(
                     service_item['service_cycle_id'], 
+                    service_item['machine_id'], # Añadido machine_id aquí
                     machine_type
                 )
                 if not validation['valid']:
@@ -189,7 +204,7 @@ class SaleService:
                     }
                 
                 # Calcular precio y duración
-                price = float(cycle.get('precio', 0))
+                price = float(cycle.get('price', 0)) # Cambiado de 'precio' a 'price'
                 duration = cycle.get('duracion', 30)
                 
                 # Actualizar item con datos calculados
@@ -250,11 +265,21 @@ class SaleService:
                 if service.get('status') == 'pending':
                     # Marcar máquina como ocupada y servicio como activo
                     machine_id = service.get('machine_id')
-                    if machine_id:
-                        self._activate_machine_service(machine_id, sale_id, i)
+                    service_cycle_id = service.get('service_cycle_id')
+                    duration = service.get('duration') # Duración en minutos
+
+                    if machine_id and service_cycle_id and duration is not None:
+                        # Capturar los valores de started_at y estimated_end_at
+                        success, started_at_val, estimated_end_at_val = self._activate_machine_service(machine_id, sale_id, i, service_cycle_id, duration)
+                        if success:
+                            # Actualizar estado del servicio en la venta, pasando los nuevos tiempos
+                            self.sale_repository.update_service_status(sale_id, i, 'active', started_at=started_at_val, estimated_end_at=estimated_end_at_val)
+                        else:
+                            logger.error(f"No se pudo activar la máquina {machine_id} para la venta {sale_id}.")
+                            # Considerar manejar el error, ej. marcar la venta como cancelada o el servicio como fallido
                     
-                    # Actualizar estado del servicio
-                    self.sale_repository.update_service_status(sale_id, i, 'active')
+                    # La actualización del estado se mueve dentro del if success
+                    # self.sale_repository.update_service_status(sale_id, i, 'active') 
             
             # Completar la venta
             updated_sale = self.sale_repository.update_sale_status(sale_id, 'completed')
@@ -338,12 +363,12 @@ class SaleService:
                 # Sin filtros específicos, obtener todas las ventas
                 result = self.sale_repository.find_many({}, page, per_page, 'created_at', -1)
             
-            sales_response = sales_response_schema.dump(result['documents'])
+            #sales_response = sales_response_schema.dump(result['documents'])
             
             return {
                 'success': True,
                 'message': 'Ventas obtenidas exitosamente',
-                'data': sales_response,
+                'data': result['documents'],
                 'pagination': {
                     'page': result['page'],
                     'per_page': result['per_page'],
@@ -447,11 +472,123 @@ class SaleService:
         
         # Si no está, buscar en secadoras
         return self.dryer_repository.find_by_id(machine_id)
-    
-    def _activate_machine_service(self, machine_id: str, sale_id: str, service_index: int) -> bool:
-        """Activar servicio en máquina"""
-        # TODO: Implementar lógica para marcar máquina como ocupada
-        # Esto podría incluir agregar un campo 'current_service' a las máquinas
-        # Por ahora, solo loggeamos la activación
-        logger.info(f"Activando servicio en máquina {machine_id} para venta {sale_id}, servicio {service_index}")
-        return True 
+
+    def _update_product_stock(self, products_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Actualizar el stock de productos después de una venta.
+        
+        Args:
+            products_data: Lista de productos vendidos con quantity.
+            
+        Returns:
+            Dict: Resultado de la operación.
+        """
+        try:
+            for product_item in products_data:
+                product_id = product_item['product_id']
+                quantity = product_item['quantity']
+                
+                # Restar la cantidad del stock
+                result = self.product_repository.update_stock(product_id, quantity, 'subtract')
+                if not result:
+                    return {'success': False, 'message': f'Error al actualizar stock del producto {product_id}'}
+            
+            return {'success': True, 'message': 'Stock de productos actualizado exitosamente'}
+        except Exception as e:
+            logger.error(f"Error al actualizar stock de productos: {e}")
+            return {'success': False, 'message': 'Error al actualizar stock de productos'}
+
+    def _activate_machine_service(self, machine_id: str, sale_id: str, service_index: int, service_cycle_id: str, duration_minutes: int) -> tuple[bool, Optional[datetime], Optional[datetime]]:
+        """
+        Activar servicio en máquina, marcar como ocupada y calcular tiempo de finalización.
+        
+        Args:
+            machine_id: ID de la máquina
+            sale_id: ID de la venta
+            service_index: Índice del servicio en la lista de la venta
+            service_cycle_id: ID del ciclo de servicio
+            duration_minutes: Duración del ciclo en minutos
+            
+        Returns:
+            tuple[bool, Optional[datetime], Optional[datetime]]: (éxito, started_at, estimated_end_at)
+        """
+        try:
+            current_time = datetime.utcnow()
+            estimated_end_time = current_time + timedelta(minutes=duration_minutes)
+
+            # Determinar si es lavadora o secadora y actualizar el repositorio correspondiente
+            machine = self._get_machine_by_id(machine_id)
+            if not machine:
+                logger.error(f"Máquina {machine_id} no encontrada para activación.")
+                return False, None, None # Devuelve False y None para los tiempos
+
+            update_data = {
+                'estado': 'ocupada',
+                'current_service': {
+                    'sale_id': sale_id,
+                    'service_index': service_index,
+                    'service_cycle_id': service_cycle_id,
+                    'started_at': current_time,
+                    'estimated_end_at': estimated_end_time
+                }
+            }
+            
+            if machine.get('tipo') == 'lavadora': # Asumiendo 'tipo' existe para lavadoras
+                self.washer_repository.upsert({'_id': machine_id, **update_data})
+            elif machine.get('tipo') == 'secadora' or 'capacidad' in machine: # Secadoras no siempre tienen 'tipo', pero tienen 'capacidad'
+                self.dryer_repository.upsert({'_id': machine_id, **update_data})
+            else:
+                logger.warning(f"Tipo de máquina desconocido para {machine_id}. No se pudo actualizar el estado.")
+                return False, None, None # Devuelve False y None para los tiempos
+
+            logger.info(f"Servicio activado en máquina {machine_id} para venta {sale_id}, servicio {service_index}. Fin estimado: {estimated_end_time}")
+            return True, current_time, estimated_end_time # Devuelve True y los tiempos
+        except Exception as e:
+            logger.error(f"Error al activar servicio en máquina {machine_id}: {e}")
+            return False, None, None # Devuelve False y None para los tiempos
+
+    def check_and_deactivate_machines(self) -> Dict[str, Any]:
+        """
+        Verifica los servicios activos y desactiva las máquinas si su ciclo ha terminado.
+        
+        Returns:
+            Dict: Resultado de la operación.
+        """
+        try:
+            active_services = self.sale_repository.get_active_services()
+            deactivated_count = 0
+            current_time = datetime.utcnow()
+
+            for service_data in active_services:
+                service_info = service_data['service']
+                machine_id = service_info['machine_id']
+                sale_id = service_data['sale_id']
+                service_index = service_data['service_index'] # Acceder directamente al service_index
+                estimated_end_at = service_info['estimated_end_at']
+
+                if estimated_end_at and current_time >= estimated_end_at:
+                    # Desactivar máquina
+                    machine = self._get_machine_by_id(machine_id)
+                    if machine:
+                        update_operators = {
+                            '$set': {'estado': 'disponible'},
+                            '$unset': {'current_service': ''} # Usar $unset directamente
+                        }
+                        if machine.get('tipo') == 'lavadora': # Asumiendo 'tipo' existe para lavadoras
+                            self.washer_repository.update_document_by_id(machine_id, update_operators)
+                        elif machine.get('tipo') == 'secadora' or 'capacidad' in machine: # Secadoras no siempre tienen 'tipo', pero tienen 'capacidad'
+                            self.dryer_repository.update_document_by_id(machine_id, update_operators)
+                        else:
+                            logger.warning(f"Tipo de máquina desconocido para {machine_id}. No se pudo actualizar el estado de la máquina.")
+                            continue # Salta a la siguiente iteración si no se puede actualizar la máquina
+                        logger.info(f"Máquina {machine_id} desactivada. Fin de servicio en venta {sale_id}.")
+                        
+                        # Actualizar estado del servicio en la venta a 'completed'
+                        self.sale_repository.update_service_status(sale_id, service_index, 'completed')
+                        deactivated_count += 1
+
+            return {'success': True, 'message': f'{deactivated_count} máquinas y servicios actualizados.'}
+
+        except Exception as e:
+            logger.error(f"Error en check_and_deactivate_machines: {e}")
+            return {'success': False, 'message': 'Error interno al desactivar máquinas.'} 

@@ -1,0 +1,180 @@
+.sales-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.main-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sales-content {
+  flex-grow: 1;
+  padding: 20px;
+  background-color: #ffffff;
+  margin: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sales-content h1 {
+  color: #333;
+  margin-bottom: 25px;
+  font-size: 2em;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
+}
+
+.deactivate-button {
+  background-color: #ff4d4f;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s ease;
+  margin-bottom: 25px;
+}
+
+.deactivate-button:hover {
+  background-color: #d9363e;
+}
+
+.create-sale-section,
+.sales-list-section {
+  background-color: #fdfdfd;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.create-sale-section h2,
+.sales-list-section h2 {
+  color: #555;
+  margin-bottom: 20px;
+  font-size: 1.6em;
+  border-bottom: 1px dashed #e0e0e0;
+  padding-bottom: 10px;
+}
+
+.sale-form .form-group {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  background-color: #fefefe;
+}
+
+.sale-form .form-group h3 {
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+}
+
+.item-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.item-input-group select,
+.item-input-group input[type="text"],
+.item-input-group input[type="number"] {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.add-item-button {
+  background-color: #1890ff;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.3s ease;
+  margin-top: 10px;
+}
+
+.add-item-button:hover {
+  background-color: #096dd9;
+}
+
+.submit-sale-button {
+  background-color: #52c41a;
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.submit-sale-button:hover {
+  background-color: #389e08;
+}
+
+.sales-table-container {
+  overflow-x: auto;
+}
+
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.sales-table th,
+.sales-table td {
+  border: 1px solid #e8e8e8;
+  padding: 12px;
+  text-align: left;
+}
+
+.sales-table th {
+  background-color: #f8f8f8;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.95em;
+}
+
+.sales-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.sales-table tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+.sales-table td {
+  font-size: 0.9em;
+  color: #444;
+}
+
+.complete-sale-button {
+  background-color: #faad14;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background-color 0.3s ease;
+}
+
+.complete-sale-button:hover {
+  background-color: #d48806;
+}

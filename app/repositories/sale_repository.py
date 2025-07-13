@@ -201,18 +201,20 @@ class SaleRepository(BaseRepository):
         
         # Agregar completed_at si el estado es completed
         if new_status == 'completed':
-            update_data['completed_at'] = datetime.utcnow()
+            update_data['completed_at'] = datetime.utcnow() # Guardar como objeto datetime
         
         return self.upsert(update_data)
     
-    def update_service_status(self, sale_id: str, service_index: int, new_status: str) -> Optional[Dict[str, Any]]:
+    def update_service_status(self, sale_id: str, service_index: int, new_status: str, started_at: Optional[datetime] = None, estimated_end_at: Optional[datetime] = None) -> Optional[Dict[str, Any]]:
         """
-        Actualizar estado de un servicio específico en una venta
+        Actualizar estado de un servicio específico en una venta, incluyendo tiempos de inicio y fin.
         
         Args:
             sale_id: ID de la venta
             service_index: Índice del servicio en la lista
             new_status: Nuevo estado del servicio
+            started_at: Hora de inicio del servicio (opcional)
+            estimated_end_at: Hora estimada de finalización del servicio (opcional)
             
         Returns:
             Dict: Venta actualizada o None
@@ -237,7 +239,8 @@ class SaleRepository(BaseRepository):
                         # Agregar timestamps según el estado
                         current_time = datetime.utcnow()
                         if new_status == 'active':
-                            updated_service['started_at'] = current_time
+                            updated_service['started_at'] = started_at if started_at else current_time
+                            updated_service['estimated_end_at'] = estimated_end_at # Asegura que estimated_end_at se guarde
                         elif new_status == 'completed':
                             updated_service['completed_at'] = current_time
                         
@@ -280,7 +283,10 @@ class SaleRepository(BaseRepository):
                 }
             },
             {
-                '$unwind': '$items.services'
+                '$unwind': {
+                    'path': '$items.services',
+                    'includeArrayIndex': 'service_index' # Añade el índice del array
+                }
             },
             {
                 '$match': {
@@ -293,6 +299,7 @@ class SaleRepository(BaseRepository):
                     'client_id': '$client_id',
                     'employee_id': '$employee_id',
                     'service': '$items.services',
+                    'service_index': '$service_index', # Incluir el service_index
                     'created_at': '$created_at'
                 }
             }

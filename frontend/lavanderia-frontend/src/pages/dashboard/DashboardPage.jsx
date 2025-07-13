@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar'; // Importar Sidebar
+import { deactivateMachines } from '../../services/salesService'; // Importar la función para desactivar máquinas
 import './DashboardPage.css'; // Importar el archivo CSS para el dashboard
 
 const DashboardPage = () => {
@@ -9,6 +10,15 @@ const DashboardPage = () => {
   const handleLogout = () => {
     localStorage.removeItem('token'); // Eliminar el token del localStorage
     navigate('/'); // Redirigir a la página de login
+  };
+
+  const handleDeactivateMachinesClick = async () => {
+    try {
+      const response = await deactivateMachines();
+      alert(response.message);
+    } catch (error) {
+      alert(`Error al reactivar máquinas: ${error.response ? error.response.data.message : error.message}`);
+    }
   };
 
   return (
@@ -29,7 +39,7 @@ const DashboardPage = () => {
             <h2>Productos</h2>
             <p>Gestionar productos disponibles</p>
           </div>
-          <div className="dashboard-card">
+          <div className="dashboard-card" onClick={() => navigate('/sales')}>
             <h2>Ventas</h2>
             <p>Ver historial de ventas</p>
           </div>
@@ -40,6 +50,10 @@ const DashboardPage = () => {
           <div className="dashboard-card" onClick={() => navigate('/clients')}>
             <h2>Clientes</h2>
             <p>Gestionar información de clientes</p>
+          </div>
+          <div className="dashboard-card" onClick={handleDeactivateMachinesClick}>
+            <h2>Reactivar Máquinas</h2>
+            <p>Liberar máquinas con ciclos finalizados</p>
           </div>
         </div>
       </div>

@@ -59,8 +59,9 @@ class ServiceItemSchema(Schema):
         validate=validate.OneOf(['pending', 'active', 'completed']),
         missing='pending'
     )
-    started_at = fields.DateTime(allow_none=True)
-    completed_at = fields.DateTime(allow_none=True)
+    started_at = fields.String(allow_none=True) # Cambiado de fields.DateTime
+    completed_at = fields.String(allow_none=True) # Cambiado de fields.DateTime
+    estimated_end_at = fields.String(allow_none=True) # Cambiado de fields.DateTime
 
 class PaymentMethodSchema(Schema):
     """
@@ -176,7 +177,9 @@ class SaleSchema(Schema):
                     'machine_type': item.get('machine_type'),
                     'duration': item.get('duration'),
                     'price': item.get('price'),
-                    'status': item.get('status', 'pending')
+                    'status': item.get('status', 'pending'),
+                    'started_at': item.get('started_at'), # Asegura que started_at se procese
+                    'estimated_end_at': item.get('estimated_end_at') # Asegura que estimated_end_at se procese
                 })
         
         # Reemplazar items con la estructura procesada

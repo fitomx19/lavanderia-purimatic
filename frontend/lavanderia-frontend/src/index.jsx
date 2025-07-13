@@ -8,6 +8,7 @@ import ClientsPage from './pages/clients/ClientsPage'; // Importar ClientsPage
 import MachinePages from './pages/machines/MachinePages'; // Importar MachinePages
 import ProductosPages from './pages/productos/ProductosPages'; // Importar ProductosPages
 import ServicesPages from './pages/CycleServices/ServicesPages'; // Importar ServicesPages
+import SalesPage from './pages/sales/SalesPages'; // Importar SalesPage
 import './index.css'; // Importar los estilos globales
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -22,6 +23,7 @@ root.render(
         <Route path="/machines" element={<MachinePages />} /> {/* Añadir la ruta para Máquinas */}
         <Route path="/productos" element={<ProductosPages />} /> {/* Añadir la ruta para Productos */}
         <Route path="/service-cycles" element={<ServicesPages />} /> {/* Añadir la ruta para Ciclos de Servicio */}
+        <Route path="/sales" element={<SalesPage />} /> {/* Añadir la ruta para Ventas */}
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

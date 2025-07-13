@@ -28,56 +28,61 @@ class BaseRepository(ABC):
     
     def upsert(self, data: Dict[str, Any], filter_criteria: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
-        Operación UPSERT: actualizar si existe, crear si no existe
+        Operación UPSERT: actualizar si existe, crear si no existe.
+        Mejorado para distinguir entre inserción y actualización explícita.
         
         Args:
             data: Datos a insertar/actualizar
-            filter_criteria: Criterios de filtro para encontrar el documento existente
-                           Si no se proporciona, se usa el _id del data si existe
+            filter_criteria: Criterios de filtro para encontrar el documento existente.
+                           Si no se proporciona, se usa el _id del data si existe,
+                           o se asume una inserción si no hay _id ni filtro único.
             
         Returns:
             Dict: Documento creado o actualizado
         """
         try:
-            # Preparar datos para la operación
-            update_data = self._prepare_update_data(data)
-            
-            # Determinar criterios de filtro
-            if filter_criteria is None:
-                if '_id' in data:
-                    filter_criteria = {'_id': ObjectId(data['_id']) if isinstance(data['_id'], str) else data['_id']}
-                else:
-                    # Si no hay criterios de filtro y no hay _id, usar campos únicos definidos
-                    filter_criteria = self._get_unique_filter(data)
-            
-            print(update_data)
-            
-            # Realizar upsert
-            result = self.collection.update_one(
-                filter_criteria,
-                {'$set': update_data},
-                upsert=True
-            )
+            insert_or_update_data = self._prepare_update_data(data)
 
-            
-            
-            # Obtener y retornar el documento
-            if result.upserted_id:
-                # Documento creado
-                document = self.collection.find_one({'_id': result.upserted_id})
-                logger.info(f"Documento creado en {self.collection_name}: {result.upserted_id}")
-            else:
-                # Documento actualizado
-                document = self.collection.find_one(filter_criteria)
-                logger.info(f"Documento actualizado en {self.collection_name}")
-            
+            final_filter = filter_criteria
+
+            # Determinar el filtro final o si es una operación de inserción pura
+            if final_filter is None:
+                if '_id' in data: # Si hay _id en los datos, es una actualización explícita
+                    final_filter = {'_id': ObjectId(data['_id']) if isinstance(data['_id'], str) else data['_id']}
+                else:
+                    # Si no hay _id y no hay filtro, intentar obtener un filtro único del subtipo.
+                    # Si el filtro único es vacío (como en SaleRepository para nuevas ventas),
+                    # entonces es una inserción pura.
+                    unique_filter_from_subclass = self._get_unique_filter(data)
+                    if unique_filter_from_subclass: # Si hay un filtro único de negocio, usarlo para upsert
+                        final_filter = unique_filter_from_subclass
+                    # Si unique_filter_from_subclass es {}, final_filter seguirá siendo None, indicando inserción pura.
+
+            if final_filter: # Si tenemos un filtro, es una operación de update/upsert
+                result = self.collection.update_one(
+                    final_filter,
+                    {'$set': insert_or_update_data},
+                    upsert=True
+                )
+                
+                if result.upserted_id:
+                    document = self.collection.find_one({'_id': result.upserted_id})
+                    logger.info(f"Documento creado en {self.collection_name}: {result.upserted_id}")
+                else:
+                    document = self.collection.find_one(final_filter)
+                    logger.info(f"Documento actualizado en {self.collection_name}")
+            else: # No hay filtro final, es una inserción pura
+                result = self.collection.insert_one(insert_or_update_data)
+                document = self.collection.find_one({'_id': result.inserted_id})
+                logger.info(f"Documento insertado en {self.collection_name}: {result.inserted_id}")
+
             if document is None:
-                raise RuntimeError(f"No se pudo recuperar el documento después del upsert en {self.collection_name}")
+                raise RuntimeError(f"No se pudo recuperar el documento después del upsert/insert en {self.collection_name}")
             
             return cast(Dict[str, Any], self._format_document(document))
             
         except PyMongoError as e:
-            logger.error(f"Error en upsert de {self.collection_name}: {e}")
+            logger.error(f"Error en upsert/insert de {self.collection_name}: {e}")
             raise
     
     def find_by_id(self, document_id: Union[str, ObjectId]) -> Optional[Dict[str, Any]]:
@@ -213,6 +218,37 @@ class BaseRepository(ABC):
             logger.error(f"Error en soft delete en {self.collection_name}: {e}")
             raise
     
+    def update_document_by_id(self, document_id: Union[str, ObjectId], update_operators: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Actualizar un documento por ID con operadores específicos de MongoDB.
+        
+        Args:
+            document_id: ID del documento a actualizar.
+            update_operators: Diccionario de operadores de actualización de MongoDB (ej. {'$set': {...}, '$unset': {...}}).
+            
+        Returns:
+            Dict: Documento actualizado o None.
+        """
+        try:
+            if isinstance(document_id, str):
+                document_id = ObjectId(document_id)
+
+            result = self.collection.update_one(
+                {'_id': document_id},
+                update_operators
+            )
+
+            if result.modified_count > 0:
+                updated_document = self.collection.find_one({'_id': document_id})
+                logger.info(f"Documento actualizado en {self.collection_name} por ID: {document_id}")
+                return cast(Dict[str, Any], self._format_document(updated_document))
+            
+            return None
+
+        except PyMongoError as e:
+            logger.error(f"Error al actualizar documento por ID en {self.collection_name}: {e}")
+            raise
+
     def _prepare_update_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Preparar datos para actualización

@@ -196,3 +196,23 @@ def get_sales_summary(current_user):
             
     except Exception as e:
         return error_response('Error interno del servidor', 500) 
+
+@sale_bp.route('/sales/deactivate-machines', methods=['POST'])
+@admin_required
+def deactivate_machines(current_user):
+    """
+    Verifica y desactiva máquinas cuyos ciclos de servicio han terminado.
+    POST /api/sales/deactivate-machines
+    """
+    try:
+        result = sale_service.check_and_deactivate_machines()
+        
+        if result['success']:
+            return success_response(
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 500)
+
+    except Exception as e:
+        return error_response('Error interno del servidor', 500) 
