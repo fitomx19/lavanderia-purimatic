@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../components/layout/Sidebar'; // Re-agregado el componente Sidebar
 import Header from '../../components/layout/Header'; // Importar Header
 import { createSale, getSales, completeSale, deactivateMachines } from '../../services/salesService';
 import { getProducts } from '../../services/productoService';
@@ -22,6 +21,27 @@ const SalesPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [totalAmount, setTotalAmount] = useState(0);
+
+  // Función para calcular el total
+  const calculateTotal = (currentProducts, currentServices) => {
+    let total = 0;
+
+    currentProducts.forEach(item => {
+      const product = products.find(p => p._id === item.product_id);
+      if (product) {
+        total += parseFloat(product.precio) * item.quantity;
+      }
+    });
+
+    currentServices.forEach(item => {
+      const serviceCycle = serviceCycles.find(s => s._id === item.service_cycle_id);
+      if (serviceCycle) {
+        total += parseFloat(serviceCycle.price);
+      }
+    });
+    return total;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,24 +50,30 @@ const SalesPage = () => {
         setSales(salesData.data);
 
         const productsData = await getProducts();
+        console.log('Products Data:', productsData);
         setProducts(productsData.data.products || []);
 
         const washersData = await getAllActiveWashers();
         const dryersData = await getAllActiveDryers();
 
-        // Asegurar que el tipo de máquina esté presente para el filtrado
+
+
+        console.log('Washers Data:', washersData);
+        console.log('Dryers Data:', dryersData);
+
         const allMachines = [
-          ...(washersData.data || []).map(washer => ({ ...washer, tipo: 'lavadora' })),
-          ...(dryersData.data || []).map(dryer => ({ ...dryer, tipo: 'secadora' }))
+          ...(washersData.data?.map(w => ({ ...w, tipo: 'lavadora' })) || []),
+          ...(dryersData.data?.map(d => ({ ...d, tipo: 'secadora' })) || []),
         ];
         setMachines(allMachines);
         console.log('All Machines State:', allMachines); // Debugging line
 
         const serviceCyclesData = await getServiceCycles();
-        setServiceCycles(serviceCyclesData.data.data || []);
-        console.log('Service Cycles State:', serviceCyclesData.data.data || []); // Debugging line
+        setServiceCycles(serviceCyclesData.data || []);
+        console.log('Service Cycles State:', serviceCyclesData.data || []); // Debugging line
 
       } catch (err) {
+        console.error('Error fetching data:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -118,16 +144,20 @@ const SalesPage = () => {
   };
 
   const handleProductItemChange = (index, field, value) => {
-    const updatedProducts = newSale.items.products.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
-    );
-    setNewSale(prev => ({
-      ...prev,
-      items: {
-        ...prev.items,
-        products: updatedProducts
-      }
-    }));
+    setNewSale(prev => {
+      const updatedProducts = prev.items.products.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      );
+      const newTotal = calculateTotal(updatedProducts, prev.items.services);
+      setTotalAmount(newTotal);
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          products: updatedProducts
+        }
+      };
+    });
   };
 
   const handleAddServiceItem = () => {
@@ -142,29 +172,33 @@ const SalesPage = () => {
   };
 
   const handleServiceItemChange = (index, field, value) => {
-    const updatedServices = newSale.items.services.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
-    );
+    setNewSale(prev => {
+      const updatedServices = prev.items.services.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      );
 
-    // Si se cambia el service_cycle_id, actualiza el service_type del item
-    if (field === 'service_cycle_id') {
-      const selectedCycle = serviceCycles.find(cycle => cycle._id === value);
-      if (selectedCycle) {
-        updatedServices[index].service_type = selectedCycle.service_type;
-        // Limpiar los IDs de máquina si se cambia el tipo de servicio
-        updatedServices[index].machine_id = '';
-        updatedServices[index].washer_id = '';
-        updatedServices[index].dryer_id = '';
+      // Si se cambia el service_cycle_id, actualiza el service_type del item
+      if (field === 'service_cycle_id') {
+        const selectedCycle = serviceCycles.find(cycle => cycle._id === value);
+        if (selectedCycle) {
+          updatedServices[index].service_type = selectedCycle.service_type;
+          // Limpiar los IDs de máquina si se cambia el tipo de servicio
+          updatedServices[index].machine_id = '';
+          updatedServices[index].washer_id = '';
+          updatedServices[index].dryer_id = '';
+        }
       }
-    }
 
-    setNewSale(prev => ({
-      ...prev,
-      items: {
-        ...prev.items,
-        services: updatedServices
-      }
-    }));
+      const newTotal = calculateTotal(prev.items.products, updatedServices);
+      setTotalAmount(newTotal);
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          services: updatedServices
+        }
+      };
+    });
   };
 
   const handleAddPaymentMethod = () => {
@@ -189,7 +223,7 @@ const SalesPage = () => {
 
   return (
     <div className="sales-layout">
-     
+      
       <div className="main-content">
         <Header />
         <div className="sales-content">
@@ -214,7 +248,7 @@ const SalesPage = () => {
                       <option value="">Selecciona un producto</option>
                       {products.map(product => (
                         <option key={product._id} value={product._id}>
-                          {product.nombre} (Stock: {product.stock})
+                          {product.nombre} (Stock: {product.stock}) - ${product.precio}
                         </option>
                       ))}
                     </select>
@@ -337,6 +371,9 @@ const SalesPage = () => {
 
               <button type="submit" className="submit-sale-button">Crear Venta</button>
             </form>
+            <div className="total-amount">
+              <h3>Total: ${totalAmount.toFixed(2)}</h3>
+            </div>
           </section>
 
           <section className="sales-list-section">
