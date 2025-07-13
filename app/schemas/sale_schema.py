@@ -15,14 +15,12 @@ class ProductItemSchema(Schema):
         validate=validate.Range(min=1, max=100),
         error_messages={'required': 'La cantidad es requerida'}
     )
-    unit_price = fields.Decimal(
-        places=2,
+    unit_price = fields.Float(
         validate=validate.Range(min=0.01, max=1000),
         allow_none=True,
         missing=None
     )
-    subtotal = fields.Decimal(
-        places=2,
+    subtotal = fields.Float(
         validate=validate.Range(min=0.01, max=10000),
         allow_none=True,
         missing=None
@@ -49,8 +47,7 @@ class ServiceItemSchema(Schema):
         validate=validate.Range(min=1, max=180),
         allow_none=True
     )
-    price = fields.Decimal(
-        places=2,
+    price = fields.Float(
         validate=validate.Range(min=0.01, max=1000),
         allow_none=True,
         missing=None
@@ -59,9 +56,9 @@ class ServiceItemSchema(Schema):
         validate=validate.OneOf(['pending', 'active', 'completed']),
         missing='pending'
     )
-    started_at = fields.String(allow_none=True) # Cambiado de fields.DateTime
-    completed_at = fields.String(allow_none=True) # Cambiado de fields.DateTime
-    estimated_end_at = fields.String(allow_none=True) # Cambiado de fields.DateTime
+    started_at = fields.String(allow_none=True)
+    completed_at = fields.String(allow_none=True)
+    estimated_end_at = fields.String(allow_none=True)
 
 class PaymentMethodSchema(Schema):
     """
@@ -73,9 +70,8 @@ class PaymentMethodSchema(Schema):
         validate=validate.OneOf(['efectivo', 'tarjeta_credito', 'tarjeta_recargable']),
         error_messages={'required': 'El tipo de pago es requerido'}
     )
-    amount = fields.Decimal(
+    amount = fields.Float(
         required=True,
-        places=2,
         validate=validate.Range(min=0.01, max=10000),
         error_messages={'required': 'El monto es requerido'}
     )
@@ -121,8 +117,7 @@ class SaleSchema(Schema):
         required=True,
         error_messages={'required': 'El ID de la tienda es requerido'}
     )
-    total_amount = fields.Decimal(
-        places=2,
+    total_amount = fields.Float(
         validate=validate.Range(min=0.01, max=10000),
         allow_none=True,
         missing=None
@@ -178,8 +173,8 @@ class SaleSchema(Schema):
                     'duration': item.get('duration'),
                     'price': item.get('price'),
                     'status': item.get('status', 'pending'),
-                    'started_at': item.get('started_at'), # Asegura que started_at se procese
-                    'estimated_end_at': item.get('estimated_end_at') # Asegura que estimated_end_at se procese
+                    'started_at': item.get('started_at'),
+                    'estimated_end_at': item.get('estimated_end_at')
                 })
         
         # Reemplazar items con la estructura procesada
@@ -224,12 +219,13 @@ class SaleResponseSchema(Schema):
     client_id = fields.Str()
     employee_id = fields.Str()
     store_id = fields.Str()
-    total_amount = fields.Decimal(places=2)
+    total_amount = fields.Float()
     payment_methods = fields.List(fields.Nested(PaymentMethodSchema))
     items = fields.Nested(SaleItemsSchema)
     status = fields.Str()
     created_at = fields.DateTime()
     completed_at = fields.DateTime()
+    finalized_at = fields.DateTime(allow_none=True) # Añadir finalized_at al esquema de respuesta
 
 # Instancias de esquemas para uso en la aplicación
 sale_schema = SaleSchema()

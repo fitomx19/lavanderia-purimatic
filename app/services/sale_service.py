@@ -374,33 +374,39 @@ class SaleService:
                 'message': 'Error interno del servidor'
             }
     
-    def get_sales_list(self, page: int = 1, per_page: int = 10, **filters) -> Dict[str, Any]:
+    def get_sales_list(self, page: int = 1, per_page: int = 10, exclude_finalized: bool = False, **filters) -> Dict[str, Any]:
         """
-        Obtener lista de ventas con filtros
+        Obtener lista de ventas con filtros, incluyendo la opción de excluir ventas finalizadas.
         
         Args:
             page: Página actual
             per_page: Elementos por página
+            exclude_finalized: Si es True, no incluir ventas con estado 'finalized'.
             **filters: Filtros adicionales (status, employee_id, client_id, date_range)
             
         Returns:
             Dict: Lista de ventas
         """
         try:
-            # Aplicar filtros según los parámetros
-            if 'employee_id' in filters:
-                result = self.sale_repository.find_by_employee(filters['employee_id'], page, per_page)
-            elif 'client_id' in filters:
-                result = self.sale_repository.find_by_client(filters['client_id'], page, per_page)
-            elif 'status' in filters:
-                result = self.sale_repository.find_by_status(filters['status'], page, per_page)
-            elif 'today' in filters and filters['today']:
-                result = self.sale_repository.find_today_sales(page, per_page)
-            else:
-                # Sin filtros específicos, obtener todas las ventas
-                result = self.sale_repository.find_many({}, page, per_page, 'created_at', -1)
+            query_filters = {} # Filtros base para la consulta
+
+            if exclude_finalized:
+                query_filters['status'] = {'$ne': 'finalized'}
             
-            #sales_response = sales_response_schema.dump(result['documents'])
+            # Aplicar filtros específicos si existen
+            if 'employee_id' in filters:
+                query_filters['employee_id'] = filters['employee_id']
+            elif 'client_id' in filters:
+                query_filters['client_id'] = filters['client_id']
+            elif 'status' in filters:
+                query_filters['status'] = filters['status']
+            elif 'today' in filters and filters['today']:
+                today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                tomorrow = today + timedelta(days=1)
+                query_filters['created_at'] = {'$gte': today, '$lte': tomorrow}
+            
+            # Obtener ventas usando find_many con los filtros combinados
+            result = self.sale_repository.find_many(query_filters, page, per_page, 'created_at', -1)
             
             return {
                 'success': True,
@@ -627,3 +633,46 @@ class SaleService:
         except Exception as e:
             logger.error(f"Error en check_and_deactivate_machines: {e}")
             return {'success': False, 'message': 'Error interno al desactivar máquinas.'} 
+
+# Modificaciones para el servicio de ventas para soportar el estado 'finalized'
+
+    def finalize_sale(self, sale_id: str) -> Dict[str, Any]:
+        """
+        Finalizar una venta, asegurando que todos los servicios estén completados.
+        
+        Args:
+            sale_id: ID de la venta a finalizar.
+            
+        Returns:
+            Dict: Resultado de la operación de finalización.
+        """
+        try:
+            sale = self.sale_repository.find_by_id(sale_id)
+            if not sale:
+                return {'success': False, 'message': 'Venta no encontrada'}
+            
+            if sale.get('status') == 'finalized':
+                return {'success': False, 'message': 'La venta ya ha sido finalizada'}
+            
+            # Verificar el estado de los servicios
+            services_status = self.sale_repository.get_sale_services_status(sale_id)
+            
+            if services_status['has_services'] and not services_status['all_services_completed']:
+                return {'success': False, 'message': 'No todos los servicios de la venta están completados'}
+            
+            # Actualizar el estado de la venta a 'finalized'
+            updated_sale = self.sale_repository.update_sale_status(sale_id, 'finalized')
+            
+            if updated_sale:
+                sale_response = sale_response_schema.dump(updated_sale)
+                return {
+                    'success': True,
+                    'message': 'Venta finalizada exitosamente',
+                    'data': sale_response
+                }
+            else:
+                return {'success': False, 'message': 'Error al finalizar la venta'}
+                
+        except Exception as e:
+            logger.error(f"Error al finalizar venta {sale_id}: {e}")
+            return {'success': False, 'message': 'Error interno del servidor al finalizar la venta'} 

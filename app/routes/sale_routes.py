@@ -3,6 +3,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.sale_service import SaleService
 from app.utils.auth_utils import employee_required, admin_required
 from app.utils.response_utils import success_response, error_response, paginated_response
+from app import socketio # Importar la instancia de socketio
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Crear blueprint para rutas de ventas
 sale_bp = Blueprint('sales', __name__)
@@ -30,6 +34,8 @@ def create_sale(current_user):
         result = sale_service.create_sale(data)
         
         if result['success']:
+            # Emitir evento WebSocket para notificar nueva venta
+            socketio.emit('new_sale', result['data'])
             return success_response(
                 data=result['data'],
                 message=result['message'],
@@ -60,6 +66,7 @@ def get_sales(current_user):
         employee_id = request.args.get('employee_id', type=str)
         client_id = request.args.get('client_id', type=str)
         today = request.args.get('today', False, type=bool)
+        exclude_finalized = request.args.get('exclude_finalized', False, type=bool) # Nuevo parámetro
         
         # Preparar filtros
         filters = {}
@@ -73,7 +80,7 @@ def get_sales(current_user):
             filters['today'] = True
         
         # Obtener ventas
-        result = sale_service.get_sales_list(page, per_page, **filters)
+        result = sale_service.get_sales_list(page, per_page, exclude_finalized, **filters) # Pasar exclude_finalized
         
         if result['success']:
             pagination = result.get('pagination', {})
@@ -160,6 +167,33 @@ def complete_sale(current_user, sale_id):
         result = sale_service.complete_sale(sale_id)
         
         if result['success']:
+            # Emitir evento WebSocket para notificar venta completada y estado de máquinas
+            socketio.emit('sale_updated', result['data'])
+            socketio.emit('machine_status_updated')
+            return success_response(
+                data=result['data'],
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 400)
+            
+    except Exception as e:
+        logger.error(f"Error al completar venta: {e}")
+        return error_response('Error interno del servidor', 500)
+
+@sale_bp.route('/sales/<sale_id>/finalize', methods=['POST'])
+@employee_required
+def finalize_sale(current_user, sale_id):
+    """
+    Finalizar una venta
+    POST /api/sales/{id}/finalize
+    """
+    try:
+        result = sale_service.finalize_sale(sale_id)
+        
+        if result['success']:
+            # Emitir evento WebSocket para notificar venta finalizada
+            socketio.emit('sale_finalized', result['data'])
             return success_response(
                 data=result['data'],
                 message=result['message']
@@ -208,6 +242,8 @@ def deactivate_machines(current_user):
         result = sale_service.check_and_deactivate_machines()
         
         if result['success']:
+            # Emitir evento WebSocket para notificar cambios en el estado de las máquinas
+            socketio.emit('machine_status_updated')
             return success_response(
                 message=result['message']
             )

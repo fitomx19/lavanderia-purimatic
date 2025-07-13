@@ -201,7 +201,9 @@ class SaleRepository(BaseRepository):
         
         # Agregar completed_at si el estado es completed
         if new_status == 'completed':
-            update_data['completed_at'] = datetime.utcnow() # Guardar como objeto datetime
+            update_data['completed_at'] = datetime.utcnow()
+        elif new_status == 'finalized': # Nuevo: agregar finalized_at
+            update_data['finalized_at'] = datetime.utcnow()
         
         return self.upsert(update_data)
     
@@ -353,7 +355,35 @@ class SaleRepository(BaseRepository):
             IndexModel([('created_at', DESCENDING)]),
             IndexModel([('completed_at', DESCENDING)]),
             IndexModel([('items.services.status', ASCENDING)]),
-            IndexModel([('items.services.machine_id', ASCENDING)])
+            IndexModel([('items.services.machine_id', ASCENDING)]),
+            IndexModel([('finalized_at', DESCENDING)]) # Nuevo índice
         ]
         
-        self.collection.create_indexes(indexes) 
+        self.collection.create_indexes(indexes)
+
+    def get_sale_services_status(self, sale_id: str) -> Dict[str, Any]:
+        """
+        Verifica el estado de todos los servicios dentro de una venta.
+        Retorna si todos los servicios están 'completed' y si hay servicios en la venta.
+        """
+        pipeline = [
+            {'$match': {'_id': ObjectId(sale_id)}},
+            {'$unwind': {'path': '$items.services', 'preserveNullAndEmptyArrays': True}}, # Preserve para ventas sin servicios
+            {'$project': {
+                '_id': 0,
+                'service_status': '$items.services.status'
+            }}
+        ]
+        results = list(self.collection.aggregate(pipeline))
+        
+        all_completed = True
+        has_services = False
+
+        if results and results[0].get('service_status') is not None: # Si hay al menos un servicio
+            has_services = True
+            for res in results:
+                if res['service_status'] != 'completed':
+                    all_completed = False
+                    break
+        
+        return {'all_services_completed': all_completed, 'has_services': has_services} 

@@ -68,6 +68,21 @@ export const completeSale = async (saleId) => {
   }
 };
 
+// Función para finalizar una venta
+export const finalizeSale = async (saleId) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_BASE_URL}/api/sales/${saleId}/finalize`, {}, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al finalizar la venta');
+  }
+};
+
 // Función para reactivar máquinas (administrativo)
 export const deactivateMachines = async () => {
   try {

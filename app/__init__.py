@@ -4,10 +4,12 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 import logging
+from flask_socketio import SocketIO # Importar SocketIO
 
 # Instancia global de MongoDB
 mongo_client = None
 db = None
+socketio = None # Añadir una instancia global para SocketIO
 
 def create_app(config_class):
     """
@@ -27,7 +29,7 @@ def create_app(config_class):
         logging.basicConfig(level=logging.INFO)
     
     # Inicializar extensiones
-    init_extensions(app)
+    init_extensions(app) # Esto ahora inicializará SocketIO
     
     # Inicializar base de datos
     init_database(app)
@@ -41,13 +43,17 @@ def create_app(config_class):
     return app
 
 def init_extensions(app):
-    """Inicializar extensiones de Flask"""
+    """Inicializar extensiones de Flask y SocketIO"""
+    global socketio # Acceder a la variable global
     
     # Configurar JWT
     jwt = JWTManager(app)
     
     # Configurar CORS
     CORS(app, origins=app.config['CORS_ORIGINS'])
+    
+    # Inicializar Flask-SocketIO
+    socketio = SocketIO(app, cors_allowed_origins=app.config['CORS_ORIGINS'])
     
     # Configurar JWT callbacks
     @jwt.token_in_blocklist_loader

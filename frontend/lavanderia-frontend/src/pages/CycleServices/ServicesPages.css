@@ -32,7 +32,7 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 25px;
   transition: all 0.3s ease;
   display: block; /* Para centrarlo fácilmente */
@@ -71,7 +71,7 @@
 .services-table th {
   background-color: #f8f8f8;
   color: #555;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   font-size: 0.9em;
 }
@@ -93,7 +93,7 @@
   font-size: 14px;
   transition: background-color 0.3s ease, transform 0.2s ease;
   margin-right: 8px;
-  font-weight: 500;
+  font-weight: normal; /* Eliminar negritas */
 }
 
 .edit-button {
@@ -123,14 +123,14 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.6); /* Fondo más oscuro */
+  background-color: rgba(0, 0, 0, 0.7); /* Fondo más oscuro y prominente */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition: opacity 0.4s ease, visibility 0.4s ease; /* Transición más suave */
 }
 
 .service-form-modal.show {
@@ -140,16 +140,18 @@
 
 .service-form-content {
   background-color: #ffffff;
-  padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  width: 90%;
-  max-width: 650px; /* Ancho un poco mayor para el contenido de máquinas */
-  transform: translateY(-20px);
-  transition: transform 0.3s ease;
+  padding: 35px 40px; /* Ajuste de padding */
+  border-radius: 12px; /* Bordes más redondeados */
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35); /* Sombra más pronunciada */
+  width: 95%;
+  max-width: 800px; /* Ancho máximo aumentado para más espacio */
+  max-height: 90vh; /* Altura máxima para permitir desplazamiento */
+  overflow-y: auto; /* Permite desplazamiento vertical si el contenido es muy largo */
+  transform: translateY(-30px); /* Inicio de la animación ligeramente más alto */
+  transition: transform 0.4s ease; /* Transición más suave */
   display: flex;
   flex-direction: column;
-  gap: 20px; /* Espacio entre secciones del formulario */
+  gap: 25px; /* Más espacio entre secciones del formulario */
 }
 
 .service-form-modal.show .service-form-content {
@@ -161,30 +163,65 @@
   margin-bottom: 25px;
   color: #2c3e50;
   text-align: center;
-  font-size: 1.8em;
-  font-weight: 700;
+  font-size: 2em;
+  font-weight: 600; /* Ligeramente menos negrita */
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
 }
 
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+  gap: 15px;
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #d0d0d0;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.step-dot.active {
+  background-color: #007bff;
+  transform: scale(1.2);
+}
+
+
 .form-group {
-  margin-bottom: 20px; /* Más espacio entre grupos de formulario */
+  margin-bottom: 22px; /* Más espacio entre grupos de formulario */
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #f0f0f0; /* Separador suave */
+}
+
+.form-group:last-of-type {
+  border-bottom: none; /* No hay separador en el último grupo */
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 10px; /* Más espacio entre label y input */
   color: #34495e;
-  font-weight: 600;
-  font-size: 1.05em;
+  font-weight: 500; /* Menos negrita */
+  font-size: 1.1em;
+  border-left: 4px solid #007bff; /* Borde izquierdo para destacar el label */
+  padding-left: 10px;
+  line-height: 1.2;
 }
 
 .form-group input[type="text"],
 .form-group input[type="number"],
 .form-group select {
-  width: calc(100% - 22px); /* Ajuste de padding */
-  padding: 12px;
-  border: 1px solid #dcdcdc;
-  border-radius: 6px;
-  font-size: 16px;
+  width: calc(100% - 24px); /* Ajuste de padding y borde */
+  padding: 14px; /* Mayor padding */
+  border: 1px solid #c9d6df; /* Borde más suave */
+  border-radius: 8px; /* Bordes más redondeados */
+  font-size: 1.05em;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -192,13 +229,14 @@
 .form-group input[type="number"]:focus,
 .form-group select:focus {
   border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2); /* Sombra de foco más suave */
   outline: none;
 }
 
 .form-group input[type="checkbox"] {
-  margin-right: 8px;
-  transform: scale(1.2); /* Checkbox un poco más grande */
+  margin-right: 10px;
+  transform: scale(1.3); /* Checkbox un poco más grande */
+  accent-color: #007bff; /* Color del checkbox */
 }
 
 /* Machine Selection Grid */
@@ -206,54 +244,90 @@
   display: grid;
   grid-template-columns: 1fr; /* Una columna por defecto */
   gap: 25px; /* Espacio entre secciones de lavadoras/secadoras */
-  padding: 15px;
+  padding: 20px;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background-color: #f9f9f9;
+  border-radius: 10px; /* Bordes más redondeados */
+  background-color: #fcfcfc; /* Fondo más claro */
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.05);
 }
 
 @media (min-width: 768px) {
   .machine-selection-grid {
-    grid-template-columns: 1fr 1fr; /* Dos columnas en pantallas más grandes */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Columnas adaptativas */
   }
+}
+
+.machine-type-section {
+  border: 1px solid #d9e2ec; /* Borde para cada sección de tipo de máquina */
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .machine-type-section h3 {
   color: #34495e;
   margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1.4em;
+  margin-bottom: 18px;
+  font-size: 1.3em;
   border-bottom: 2px solid #007bff; /* Subrayado temático */
-  padding-bottom: 5px;
-  display: inline-block; /* Para que el borde sea solo del texto */
+  padding-bottom: 8px;
+  display: inline-block;
+  width: 100%;
+  text-align: center; /* Centrar el título de la sección de máquina */
+  font-weight: 600; /* Ligeramente menos negrita */
 }
 
 .machine-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  max-height: 200px; /* Altura máxima para la lista de máquinas */
+  overflow-y: auto; /* Scroll si hay muchas máquinas */
+  padding-right: 5px; /* Espacio para la barra de scroll */
+}
+
+/* Estilo para la barra de scroll */
+.machine-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.machine-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.machine-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.machine-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .machine-checkbox-label {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 5px;
-  transition: background-color 0.2s ease;
+  padding: 10px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #f0f0f0; /* Borde ligero */
 }
 
 .machine-checkbox-label:hover {
-  background-color: #e9ecef;
+  background-color: #e6f7ff; /* Color de fondo al pasar el ratón */
+  box-shadow: 0 1px 4px rgba(0, 123, 255, 0.1); /* Sombra sutil al pasar el ratón */
 }
 
 .machine-checkbox-label input[type="checkbox"] {
-  flex-shrink: 0; /* Evita que el checkbox se encoja */
-  margin-right: 12px;
+  flex-shrink: 0;
+  margin-right: 15px; /* Más espacio */
 }
 
 .machine-info {
-  font-size: 1em;
+  font-size: 0.95em;
   color: #495057;
   flex-grow: 1;
 }
@@ -263,48 +337,54 @@
   color: #888;
   font-style: italic;
   padding: 20px;
-  grid-column: 1 / -1; /* Ocupa todo el ancho en la cuadrícula */
+  grid-column: 1 / -1;
+  background-color: #fff3cd; /* Fondo para el mensaje de advertencia */
+  border: 1px solid #ffeeba;
+  border-radius: 8px;
+  color: #856404;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 15px;
-  margin-top: 30px;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px dashed #f0f0f0; /* Separador antes de los botones */
 }
 
 .form-actions button {
-  padding: 12px 25px;
+  padding: 13px 28px; /* Padding ajustado */
   border: none;
-  border-radius: 6px;
+  border-radius: 7px; /* Bordes ligeramente más redondeados */
   cursor: pointer;
-  font-size: 17px;
-  font-weight: 600;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-size: 1.05em;
+  font-weight: 500; /* Menos negrita */
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
 
 .submit-button {
   background-color: #007bff;
   color: white;
-  box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
 }
 
 .submit-button:hover {
   background-color: #0056b3;
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
 }
 
 .cancel-button {
   background-color: #6c757d;
   color: white;
-  box-shadow: 0 4px 10px rgba(108, 117, 125, 0.3);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.2);
 }
 
 .cancel-button:hover {
   background-color: #5a6268;
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(108, 117, 125, 0.4);
+  box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
 }
 
 /* Estilos para la paginación */
@@ -312,24 +392,25 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 30px;
-  gap: 15px;
-  padding: 10px 0;
+  margin-top: 35px;
+  gap: 20px;
+  padding: 12px 0;
   background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 .pagination-controls button {
   background-color: #007bff;
   color: white;
-  padding: 10px 18px;
+  padding: 11px 20px;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: normal; /* Eliminar negritas */
   transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 3px 8px rgba(0, 123, 255, 0.2);
 }
 
 .pagination-controls button:disabled {
@@ -345,7 +426,112 @@
 }
 
 .pagination-controls span {
-  font-size: 17px;
+  font-size: 1.1em;
   color: #34495e;
-  font-weight: 500;
+  font-weight: normal; /* Eliminar negritas */
+}
+
+/* Mensajes de carga y error */
+.loading-message,
+.error-message {
+  text-align: center;
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: normal; /* Eliminar negritas */
+}
+
+.loading-message {
+  background-color: #e7f3fe;
+  color: #0056b3;
+  border: 1px solid #b3d9ff;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsive adjustments for overall container */
+@media (max-width: 992px) {
+  .services-container {
+    margin: 15px;
+    padding: 25px;
+  }
+
+  .service-form-content {
+    padding: 30px;
+    max-width: 95%;
+  }
+}
+
+@media (max-width: 768px) {
+  .services-container h1 {
+    font-size: 1.8em;
+  }
+
+  .add-service-button {
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+
+  .services-table th,
+  .services-table td {
+    padding: 12px;
+    font-size: 0.85em;
+  }
+
+  .edit-button,
+  .delete-button {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  .form-group label {
+    font-size: 1em;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group select {
+    padding: 10px;
+    font-size: 0.95em;
+  }
+
+  .form-actions button {
+    padding: 10px 20px;
+    font-size: 0.95em;
+  }
+
+  .pagination-controls button {
+    padding: 8px 15px;
+    font-size: 14px;
+  }
+
+  .pagination-controls span {
+    font-size: 1em;
+  }
+
+  .service-form-content {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 576px) {
+  .services-container {
+    margin: 10px;
+    padding: 20px;
+  }
+
+  .service-form-content {
+    padding: 20px;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group select {
+    width: calc(100% - 18px);
+  }
 }

@@ -1,180 +1,400 @@
+/* SalesPages.css */
+
 .sales-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background-color: #f0f2f5;
+  background-color: var(--background-light);
+  color: var(--text-color);
 }
 
 .main-content {
   flex-grow: 1;
-  display: flex;
-  flex-direction: column;
+  padding: 20px;
 }
 
 .sales-content {
-  flex-grow: 1;
-  padding: 20px;
-  background-color: #ffffff;
-  margin: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column; /* Cambiado a columna por defecto */
+  gap: 20px;
 }
 
-.sales-content h1 {
-  color: #333;
-  margin-bottom: 25px;
-  font-size: 2em;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 15px;
+/* Nueva clase para el contenedor de acciones y resumen */
+.sales-actions-and-summary {
+  display: flex;
+  flex-wrap: wrap; /* Permite que los elementos se envuelvan en pantallas pequeñas */
+  gap: 20px;
+  align-items: flex-start; /* Alinea los elementos en la parte superior */
 }
 
 .deactivate-button {
-  background-color: #ff4d4f;
-  color: white;
   padding: 10px 20px;
+  background-color: var(--secondary-color);
+  color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 1em;
-  transition: background-color 0.3s ease;
-  margin-bottom: 25px;
+  font-size: 1rem;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex: 0 0 38%; /* Aproximadamente 40% */
+  max-width: 38%; /* Asegura que no crezca más allá de su proporción */
+  box-sizing: border-box;
 }
 
 .deactivate-button:hover {
-  background-color: #d9363e;
+  background-color: var(--secondary-color-dark);
+  transform: translateY(-2px);
+}
+
+/* Animación para el botón de reactivación */
+@keyframes pulse-animation {
+  0% { transform: scale(1); background-color: var(--secondary-color); }
+  50% { transform: scale(1.05); background-color: var(--accent-color); }
+  100% { transform: scale(1); background-color: var(--secondary-color); }
+}
+
+.deactivate-button.animate {
+  animation: pulse-animation 1s infinite;
 }
 
 .create-sale-section,
-.sales-list-section {
-  background-color: #fdfdfd;
+.machine-list-section,
+.sales-history-details {
+  background-color: var(--container-background);
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sales-dashboard-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* 2/3 para crear venta, 1/3 para lista de máquinas */
+  gap: 20px;
   margin-bottom: 20px;
 }
 
 .create-sale-section h2,
-.sales-list-section h2 {
-  color: #555;
-  margin-bottom: 20px;
-  font-size: 1.6em;
-  border-bottom: 1px dashed #e0e0e0;
-  padding-bottom: 10px;
+.machine-list-section h2,
+.sales-history-details summary h2,
+.active-machines-summary-section h2 {
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.8rem;
 }
 
 .sale-form .form-group {
   margin-bottom: 20px;
+  border: 1px solid var(--border-color);
   padding: 15px;
-  border: 1px solid #e0e0e0;
   border-radius: 5px;
-  background-color: #fefefe;
+  background-color: var(--input-background);
 }
 
 .sale-form .form-group h3 {
-  color: #666;
+  color: var(--text-color);
   margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1.2em;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
 }
 
 .item-input-group {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
-  align-items: center;
+  flex-wrap: wrap;
 }
 
 .item-input-group select,
-.item-input-group input[type="text"],
-.item-input-group input[type="number"] {
+.item-input-group input[type="number"],
+.item-input-group input[type="text"] {
   flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
+  padding: 8px;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  font-size: 0.9em;
+  background-color: var(--input-background);
+  color: var(--text-color);
 }
 
 .add-item-button {
-  background-color: #1890ff;
+  background-color: var(--primary-color);
   color: white;
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background-color 0.3s ease;
-  margin-top: 10px;
-}
-
-.add-item-button:hover {
-  background-color: #096dd9;
-}
-
-.submit-sale-button {
-  background-color: #52c41a;
-  color: white;
-  padding: 12px 25px;
+  padding: 8px 12px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 1.1em;
-  font-weight: bold;
+  transition: background-color 0.3s ease;
+  margin-top: 5px;
+}
+
+.add-item-button:hover {
+  background-color: var(--primary-color-dark);
+}
+
+.submit-sale-button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background-color: var(--success-color);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1rem;
   transition: background-color 0.3s ease;
   margin-top: 20px;
-  width: 100%;
 }
 
 .submit-sale-button:hover {
-  background-color: #389e08;
+  background-color: var(--success-color-dark);
 }
 
-.sales-table-container {
-  overflow-x: auto;
+.total-amount {
+  text-align: right;
+  margin-top: 20px;
+  font-size: 1.5rem;
+  color: var(--primary-color);
 }
 
-.sales-table {
+.total-amount h3 {
+  margin: 0;
+}
+
+.machine-table-container,
+.sales-table-container,
+.active-machine-table-container {
+  max-height: 400px; /* Altura máxima para scroll */
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--input-background);
+}
+
+.machine-table,
+.sales-table,
+.active-machine-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
 }
 
+.machine-table th,
 .sales-table th,
-.sales-table td {
-  border: 1px solid #e8e8e8;
-  padding: 12px;
+.active-machine-table th {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 10px;
   text-align: left;
+  position: sticky; /* Encabezado pegajoso */
+  top: 0;
+  z-index: 1;
 }
 
-.sales-table th {
-  background-color: #f8f8f8;
-  color: #555;
-  font-weight: 600;
-  font-size: 0.95em;
+.machine-table td,
+.sales-table td,
+.active-machine-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-color);
 }
 
-.sales-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+.machine-table tbody tr:nth-child(even),
+.sales-table tbody tr:nth-child(even),
+.active-machine-table tbody tr:nth-child(even) {
+  background-color: var(--table-row-even);
 }
 
-.sales-table tbody tr:hover {
-  background-color: #f0f0f0;
+.machine-table tbody tr:hover,
+.sales-table tbody tr:hover,
+.active-machine-table tbody tr:hover {
+  background-color: var(--table-row-hover);
 }
 
-.sales-table td {
-  font-size: 0.9em;
-  color: #444;
+/* Estilos para estado de máquina */
+.machine-table tr.available-machine {
+  background-color: var(--success-color-light);
+}
+
+.machine-table tr.in-use-machine {
+  background-color: var(--warning-color-light);
+}
+
+.machine-table tr.out-of-service-machine {
+  background-color: var(--error-color-light);
 }
 
 .complete-sale-button {
-  background-color: #faad14;
+  background-color: var(--success-color);
   color: white;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.85em;
   transition: background-color 0.3s ease;
 }
 
 .complete-sale-button:hover {
-  background-color: #d48806;
+  background-color: var(--success-color-dark);
 }
+
+/* Estilos para el nuevo botón de finalizar venta */
+.finalize-sale-button {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-left: 10px; /* Pequeño espacio a la izquierda si está junto a otro botón */
+}
+
+.finalize-sale-button:hover {
+  background-color: var(--secondary-color-dark);
+}
+
+.sales-history-details {
+  margin-top: 20px;
+}
+
+.sales-history-details summary {
+  cursor: pointer;
+  padding: 10px 0;
+  outline: none;
+}
+
+.sales-history-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.sales-history-details summary:before {
+  content: '▼ ';
+  margin-right: 5px;
+}
+
+.sales-history-details[open] summary:before {
+  content: '▲ ';
+}
+
+/* Nueva sección para máquinas activas */
+.active-machines-summary-section {
+  background-color: var(--container-background);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  flex: 0 0 58%; /* Aproximadamente 60% */
+  max-width: 58%; /* Asegura que no crezca más allá de su proporción */
+  box-sizing: border-box;
+}
+
+/* Clases para el estado visual de los ciclos en la tabla de máquinas activas */
+.active-machine-table tr.nearing-completion {
+  background-color: var(--warning-color-light); /* Amarillo claro */
+  animation: pulse-nearing 1.5s infinite alternate;
+}
+
+.active-machine-table tr.completed-cycle {
+  background-color: var(--success-color-light); /* Verde claro */
+  font-weight: bold;
+  color: var(--success-color-dark);
+  animation: flash-complete 1s 3; /* Flashea 3 veces al completar */
+}
+
+@keyframes pulse-nearing {
+  0% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+@keyframes flash-complete {
+  0%, 100% { background-color: var(--success-color-light); }
+  50% { background-color: var(--success-color); }
+}
+
+/* Clases para el estado visual de los ciclos en la tabla de historial de ventas (texto) */
+.sales-table td .nearing-completion-text {
+  color: var(--warning-color-dark); /* Texto más oscuro para advertencia */
+  font-weight: bold;
+}
+
+.sales-table td .completed-cycle-text {
+  color: var(--success-color-dark); /* Texto más oscuro para completado */
+  font-weight: bold;
+}
+
+/* Estilos para los controles de paginación */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 10px;
+  background-color: var(--input-background);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-controls button {
+  padding: 8px 15px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background-color: var(--primary-color-dark);
+}
+
+.pagination-controls button:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.pagination-controls span {
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+/* Variables CSS para colores */
+:root {
+  --primary-color: #4CAF50; /* Verde */
+  --primary-color-dark: #409244;
+  --secondary-color: #2196F3; /* Azul */
+  --secondary-color-dark: #1976D2;
+  --accent-color: #FFC107; /* Amarillo para animacion */
+  --success-color: #4CAF50;
+  --success-color-light: #E8F5E9;
+  --success-color-dark: #388E3C;
+  --warning-color: #FF9800;
+  --warning-color-light: #FFF3E0;
+  --error-color: #F44336;
+  --error-color-light: #FFEBEE;
+  --background-light: #F8F9FA;
+  --container-background: #FFFFFF;
+  --input-background: #F0F2F5;
+  --text-color: #333333;
+  --border-color: #DDDDDD;
+  --table-row-even: #F2F2F2;
+  --table-row-hover: #E0E0E0;
+}
+
+@media (max-width: 768px) {
+  .sales-dashboard-layout {
+    grid-template-columns: 1fr; /* Columna única en pantallas pequeñas */
+  }
+
+  .sales-actions-and-summary {
+    flex-direction: column; /* Apila los elementos en pantallas pequeñas */
+  }
+
+  .deactivate-button,
+  .active-machines-summary-section {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
