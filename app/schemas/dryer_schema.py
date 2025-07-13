@@ -30,6 +30,7 @@ class DryerSchema(Schema):
         error_messages={'required': 'El ID de tienda es requerido'}
     )
     is_active = fields.Bool(missing=True)
+    tipo = fields.Str(missing='secadora')
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -43,6 +44,7 @@ class DryerUpdateSchema(Schema):
     estado = fields.Str(validate=validate.OneOf(['disponible', 'ocupada', 'mantenimiento']), allow_none=True)
     store_id = fields.Str(allow_none=True)
     is_active = fields.Bool(allow_none=True)
+    tipo = fields.Str(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -67,7 +69,7 @@ class DryerResponseSchema(Schema):
     is_active = fields.Bool()
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
-    machine_type = fields.Method("get_machine_type")
+    tipo = fields.Str()
     
     def get_machine_type(self, obj):
         """

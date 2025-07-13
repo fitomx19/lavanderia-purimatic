@@ -291,10 +291,15 @@ const SalesPage = () => {
                         >
                           <option value="">Selecciona una lavadora</option>
                           {machines
-                            .filter(machine => machine.tipo === 'lavadora' && machine.estado === 'disponible')
+                            .filter(machine => machine.tipo === 'lavadora') // Cambiado para mostrar todas las lavadoras
                             .map(machine => (
-                              <option key={machine._id} value={machine._id}>
-                                Lavadora {machine.numero}
+                              <option
+                                key={machine._id}
+                                value={machine._id}
+                                disabled={machine.estado !== 'disponible'} // Deshabilitar si no está disponible
+                                style={machine.estado !== 'disponible' ? { backgroundColor: 'yellow' } : {}} // Fondo amarillo si no está disponible
+                              >
+                                Lavadora {machine.numero} (Estado: {machine.estado})
                               </option>
                             ))}
                         </select>
@@ -305,10 +310,15 @@ const SalesPage = () => {
                         >
                           <option value="">Selecciona una secadora</option>
                           {machines
-                            .filter(machine => machine.tipo === 'secadora' && machine.estado === 'disponible')
+                            .filter(machine => machine.tipo === 'secadora') // Cambiado para mostrar todas las secadoras
                             .map(machine => (
-                              <option key={machine._id} value={machine._id}>
-                                Secadora {machine.numero}
+                              <option
+                                key={machine._id}
+                                value={machine._id}
+                                disabled={machine.estado !== 'disponible'} // Deshabilitar si no está disponible
+                                style={machine.estado !== 'disponible' ? { backgroundColor: 'yellow' } : {}} // Fondo amarillo si no está disponible
+                              >
+                                Secadora {machine.numero} (Estado: {machine.estado})
                               </option>
                             ))}
                         </select>
@@ -321,10 +331,14 @@ const SalesPage = () => {
                       >
                         <option value="">Selecciona una máquina disponible</option>
                         {machines
-                          .filter(machine => machine.estado === 'disponible')
                           .map(machine => (
-                            <option key={machine._id} value={machine._id}>
-                              {machine.numero} ({machine.marca} - {machine.tipo})
+                            <option
+                              key={machine._id}
+                              value={machine._id}
+                              disabled={machine.estado !== 'disponible'} // Deshabilitar si no está disponible
+                              style={machine.estado !== 'disponible' ? { backgroundColor: 'yellow' } : {}} // Fondo amarillo si no está disponible
+                            >
+                              {machine.numero} ({machine.marca} - {machine.tipo}) (Estado: {machine.estado})
                             </option>
                           ))}
                       </select>
@@ -376,8 +390,36 @@ const SalesPage = () => {
             </div>
           </section>
 
-          <section className="sales-list-section">
-            <h2>Historial de Ventas</h2>
+          <section className="machine-list-section">
+            <h2>Estado de Máquinas</h2>
+            <div className="machine-table-container">
+              <table className="machine-table">
+                <thead>
+                  <tr>
+                    <th>Número</th>
+                    <th>Tipo</th>
+                    <th>Marca</th>
+                    <th>Capacidad</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {machines.map(machine => (
+                    <tr key={machine._id} style={machine.estado !== 'disponible' ? { backgroundColor: 'yellow' } : {}}>
+                      <td>{machine.numero}</td>
+                      <td>{machine.tipo === 'lavadora' ? 'Lavadora' : 'Secadora'}</td>
+                      <td>{machine.marca}</td>
+                      <td>{machine.capacidad}</td>
+                      <td>{machine.estado}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <details className="sales-history-details">
+            <summary><h2>Historial de Ventas</h2></summary>
             <div className="sales-table-container">
               <table className="sales-table">
                 <thead>
@@ -415,7 +457,7 @@ const SalesPage = () => {
                 </tbody>
               </table>
             </div>
-          </section>
+          </details>
         </div>
       </div>
     </div>

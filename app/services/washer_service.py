@@ -42,7 +42,7 @@ class WasherService:
             data_to_validate = washer_data.copy()
             data_to_validate.pop('created_at', None)
             data_to_validate.pop('updated_at', None)
-            data_to_validate.pop('machine_type', None)
+            # data_to_validate.pop('tipo', None)
 
             validated_data: Dict[str, Any]
 
