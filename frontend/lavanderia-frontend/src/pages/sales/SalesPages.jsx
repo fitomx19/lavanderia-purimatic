@@ -755,6 +755,7 @@ const SalesPage = () => {
 
           {/* Machine Status */}
           <div className="machine-status-panel">
+            <div style={{padding: '2px'}}>
             <div className="panel-header">
               <h2>🏭 Estado de Máquinas</h2>
             </div>
@@ -791,6 +792,7 @@ const SalesPage = () => {
                   ))}
                 </div>
               </div>
+              <br></br>
               <div className="machines-category">
                 <h3>Secadoras</h3>
                 <div className="machines-row">
@@ -822,6 +824,7 @@ const SalesPage = () => {
                   ))}
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
