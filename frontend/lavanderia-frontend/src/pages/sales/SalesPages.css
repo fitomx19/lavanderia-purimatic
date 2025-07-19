@@ -96,6 +96,7 @@ body {
   z-index: 1;
   padding: var(--spacing-xl);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Agregado para compatibilidad con Safari */
 }
 
 /* Header de página */
@@ -107,6 +108,7 @@ body {
   padding: var(--spacing-xl);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); /* Agregado para compatibilidad con Safari */
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-heavy);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -174,7 +176,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-rows: auto auto;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-md); /* Reducido de lg a md */
   margin-bottom: var(--spacing-2xl);
 }
 
@@ -201,14 +203,14 @@ body {
 /* Tarjetas base */
 .control-panel,
 .machines-monitor,
-.sales-form-container,
-.machine-status-panel {
+.sales-form-container {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-heavy);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-md); /* Reducido de lg a md */
   transition: var(--transition-normal);
 }
 
@@ -384,10 +386,6 @@ body {
   transform: translateY(-4px);
   box-shadow: var(--shadow-medium);
   border-color: rgba(102, 126, 234, 0.3);
-}
-
-.machine-card:hover::before {
-  opacity: 1;
 }
 
 .machine-card.nearing-completion {
@@ -638,153 +636,282 @@ body {
 }
 
 /* Panel de estado de máquinas */
-.machines-list {
+.machine-status-panel {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); /* Agregado para compatibilidad con Safari */
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-heavy);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: var(--spacing-xs); /* Reducido de sm a xs */
+  /* min-height: 400px; */ /* Eliminado para mayor flexibilidad */
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 3px solid var(--primary-color);
+}
+
+.panel-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Grid Categorizado */
+.machines-grid-status {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: var(--spacing-sm);
+  gap: var(--spacing-sm); /* Reducido de lg a sm */
 }
 
-.machines-list::-webkit-scrollbar {
-  width: 6px;
+.machines-category {
+  background: rgba(0, 121, 107, 0.03);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xs); /* Reducido de 5px a var(--spacing-xs) */
+  border-left: 4px solid var(--primary-color);
 }
 
-.machines-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: var(--radius-lg);
+.machines-category h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-xs); /* Se mantiene */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.machines-list::-webkit-scrollbar-thumb {
-  background: var(--primary-gradient);
-  border-radius: var(--radius-lg);
+.machines-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); /* Reducido de 100px a 90px */
+  gap: var(--spacing-xs); /* Reducido de 5px a var(--spacing-xs) */
 }
 
-.machine-status-card {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
+/* Tarjetas de Máquina Modernas */
+.machine-card-modern {
   background: var(--surface);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xs); /* Reducido de 8px a var(--spacing-xs) */
+  box-shadow: var(--shadow-light);
   border: 2px solid transparent;
   transition: var(--transition-normal);
   position: relative;
   overflow: hidden;
+  min-height: 60px; /* Reducido de 70px a 60px */
 }
 
-.machine-status-card::before {
+.machine-card-modern::before {
   content: '';
   position: absolute;
-  left: 0;
   top: 0;
-  bottom: 0;
-  width: 4px;
+  left: 0;
+  right: 0;
+  height: 4px;
   transition: var(--transition-normal);
 }
 
-.machine-status-card.disponible::before {
+.machine-card-modern.disponible::before {
   background: var(--success-gradient);
 }
 
-.machine-status-card.en_uso::before {
+.machine-card-modern.en_uso::before { /* Cambiado de .ocupada a .en_uso */
   background: var(--warning-gradient);
 }
 
-.machine-status-card.fuera_de_servicio::before {
+.machine-card-modern.fuera_de_servicio::before {
   background: var(--danger-gradient);
 }
 
-.machine-status-card:hover {
-  transform: translateX(4px);
-  box-shadow: var(--shadow-light);
+.machine-card-modern:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-medium);
+  border-color: var(--primary-color);
 }
 
-.machine-icon {
-  font-size: 1.5rem;
-  padding: var(--spacing-md);
-  background: linear-gradient(135deg, rgba(0, 121, 107, 0.1) 0%, rgba(0, 77, 64, 0.2) 100%);
-  color: var(--primary-color);
-  border-radius: var(--radius-lg);
+/* Header de Tarjeta */
+.machine-header-modern {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  margin-bottom: var(--spacing-xs); /* Reducido de 5px a var(--spacing-xs) */
 }
 
-.machine-details {
-  flex: 1;
+.machine-number-badge {
+  background: var(--primary-gradient);
+  color: var(--text-inverse);
+  padding: 2px 5px; /* Reducido de 3px 6px a 2px 5px */
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  font-size: 0.65rem; /* Reducido de 0.7rem a 0.65rem */
+  min-width: 20px; /* Reducido de 25px a 20px */
+  text-align: center;
 }
 
-.machine-details h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.machine-details p {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.brand,
-.capacity {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-right: var(--spacing-sm);
-}
-
-.status-indicator {
+.status-pill {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  font-size: 0.75rem;
+  padding: 2px 5px; /* Reducido de 3px 6px a 2px 5px */
+  border-radius: var(--radius-lg);
+  font-size: 0.55rem; /* Reducido de 0.6rem a 0.55rem */
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.status-indicator.disponible {
-  background: rgba(46, 125, 50, 0.1);
+.status-pill.disponible {
+  background: rgba(46, 125, 50, 0.15);
   color: var(--success-color);
+  border: 1px solid rgba(46, 125, 50, 0.3);
 }
 
-.status-indicator.en_uso {
-  background: rgba(245, 124, 0, 0.1);
+.status-pill.en_uso { /* Cambiado de .ocupada a .en_uso */
+  background: rgba(245, 124, 0, 0.15);
   color: var(--warning-color);
+  border: 1px solid rgba(245, 124, 0, 0.3);
 }
 
-.status-indicator.fuera_de_servicio {
-  background: rgba(211, 47, 47, 0.1);
+.status-pill.fuera_de_servicio {
+  background: rgba(211, 47, 47, 0.15);
   color: var(--danger-color);
+  border: 1px solid rgba(211, 47, 47, 0.3);
 }
 
-.status-dot {
+.status-indicator-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   animation: status-pulse 2s infinite;
 }
 
-.status-indicator.disponible .status-dot {
+.status-pill.disponible .status-indicator-dot {
   background: var(--success-color);
 }
 
-.status-indicator.en_uso .status-dot {
+.status-pill.en_uso .status-indicator-dot { /* Cambiado de .ocupada a .en_uso */
   background: var(--warning-color);
 }
 
-.status-indicator.fuera_de_servicio .status-dot {
+.status-pill.fuera_de_servicio .status-indicator-dot {
   background: var(--danger-color);
 }
 
-@keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Cuerpo de Tarjeta */
+.machine-body {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs); /* Reducido de 5px a var(--spacing-xs) */
+  margin-bottom: var(--spacing-xs); /* Reducido de 5px a var(--spacing-xs) */
+}
+
+.machine-type-icon-large {
+  font-size: 1.2rem; /* Reducido de 1.5rem a 1.2rem */
+  background: linear-gradient(135deg, rgba(0, 121, 107, 0.1) 0%, rgba(0, 77, 64, 0.2) 100%);
+  padding: 3px; /* Reducido de 5px a 3px */
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px; /* Reducido de 35px a 30px */
+  min-height: 30px; /* Reducido de 35px a 30px */
+}
+
+.machine-specs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.machine-brand {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.7rem; /* Reducido de 0.75rem a 0.7rem */
+}
+
+.machine-capacity {
+  font-size: 0.6rem; /* Reducido de 0.65rem a 0.6rem */
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0 2px; /* Reducido de 1px 3px a 0 2px */
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+/* Información de Servicio Actual */
+.current-service-info {
+  background: rgba(245, 124, 0, 0.1);
+  border-radius: var(--radius-md);
+  padding: 2px; /* Reducido de 3px a 2px */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(245, 124, 0, 0.2);
+}
+
+.service-badge {
+  background: var(--warning-gradient);
+  color: var(--text-inverse);
+  padding: 0 2px; /* Reducido de 1px 3px a 0 2px */
+  border-radius: var(--radius-sm);
+  font-size: 0.55rem; /* Reducido de 0.6rem a 0.55rem */
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.service-time {
+  font-size: 0.6rem; /* Reducido de 0.65rem a 0.6rem */
+  color: var(--warning-color);
+  font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .machines-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .machine-body {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .machine-header-modern {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+}
+
+/* Eliminando estilos antiguos no utilizados */
+.machines-list,
+.machine-status-card,
+.machine-status-card::before,
+.machine-status-card.disponible::before,
+.machine-status-card.en_uso::before,
+.machine-status-card.fuera_de_servicio::before,
+.machine-status-card:hover,
+.machine-icon,
+.machine-details,
+.machine-details h4,
+.machine-details p,
+.brand,
+.capacity,
+.status-indicator,
+.status-indicator.disponible,
+.status-indicator.en_uso,
+.status-indicator.fuera_de_servicio,
+.status-dot,
+.status-indicator.disponible .status-dot,
+.status-indicator.en_uso .status-dot,
+.status-indicator.fuera_de_servicio .status-dot {
+  /* Estos estilos serán eliminados o reemplazados por los nuevos */
+  display: none; /* Ocultar temporalmente para asegurar que no interfieran */
 }
 
 /* Sección de historial */
@@ -795,6 +922,7 @@ body {
 .collapsible-section {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); /* Agregado para compatibilidad con Safari */
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-heavy);
   border: 1px solid rgba(255, 255, 255, 0.2);

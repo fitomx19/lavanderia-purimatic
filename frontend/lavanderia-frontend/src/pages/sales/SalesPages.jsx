@@ -38,6 +38,22 @@ const SalesPage = () => {
   // Ref para la conexión WebSocket
   const socketRef = useRef(null);
 
+  const getStatusText = (estado) => {
+    switch(estado) {
+      case 'disponible': return 'Disponible';
+      case 'en_uso': return 'Ocupada'; // Cambiado de 'ocupada' a 'en_uso' para que coincida con el estado de la máquina
+      case 'fuera_de_servicio': return 'Mantenimiento';
+      default: return estado;
+    }
+  };
+
+  const calculateEndTime = (currentService) => {
+    if (currentService?.estimated_end_at) {
+      return new Date(currentService.estimated_end_at).toLocaleTimeString();
+    }
+    return 'N/A';
+  };
+
   // Función para calcular el total
   const calculateTotal = (currentProducts, currentServices) => {
     let total = 0;
@@ -743,24 +759,69 @@ const SalesPage = () => {
               <h2>🏭 Estado de Máquinas</h2>
             </div>
             
-            <div className="machines-list">
-              {machines.map(machine => (
-                <div key={machine._id} className={`machine-status-card ${machine.estado}`}>
-                  <div className="machine-icon">
-                    {machine.tipo === 'lavadora' ? '🧺' : '💨'}
-                  </div>
-                  <div className="machine-details">
-                    <h4>#{machine.numero}</h4>
-                    <p>{machine.tipo === 'lavadora' ? 'Lavadora' : 'Secadora'}</p>
-                    <span className="brand">{machine.marca}</span>
-                    <span className="capacity">{machine.capacidad}</span>
-                  </div>
-                  <div className={`status-indicator ${machine.estado}`}>
-                    <span className="status-dot"></span>
-                    {machine.estado}
-                  </div>
+            <div className="machines-grid-status">
+              <div className="machines-category">
+                <h3>Lavadoras</h3>
+                <div className="machines-row">
+                  {machines.filter(m => m.tipo === 'lavadora').map(machine => (
+                    <div key={machine._id} className={`machine-card-modern ${machine.estado}`}>
+                      <div className="machine-header-modern">
+                        <div className="machine-number-badge">#{machine.numero}</div>
+                        <div className={`status-pill ${machine.estado}`}>
+                          <div className="status-indicator-dot"></div>
+                          <span className="status-text">{getStatusText(machine.estado)}</span>
+                        </div>
+                      </div>
+                      <div className="machine-body">
+                        <div className="machine-type-icon-large">
+                          {'🧺'}
+                        </div>
+                        <div className="machine-specs">
+                          <span className="machine-brand">{machine.marca}</span>
+                          <span className="machine-capacity">{machine.capacidad}</span>
+                        </div>
+                      </div>
+                      {machine.current_service && (
+                        <div className="current-service-info">
+                          <span className="service-badge">En servicio</span>
+                          <span className="service-time">Fin: {calculateEndTime(machine.current_service)}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div className="machines-category">
+                <h3>Secadoras</h3>
+                <div className="machines-row">
+                  {machines.filter(m => m.tipo === 'secadora').map(machine => (
+                    <div key={machine._id} className={`machine-card-modern ${machine.estado}`}>
+                      <div className="machine-header-modern">
+                        <div className="machine-number-badge">#{machine.numero}</div>
+                        <div className={`status-pill ${machine.estado}`}>
+                          <div className="status-indicator-dot"></div>
+                          <span className="status-text">{getStatusText(machine.estado)}</span>
+                        </div>
+                      </div>
+                      <div className="machine-body">
+                        <div className="machine-type-icon-large">
+                          {'💨'}
+                        </div>
+                        <div className="machine-specs">
+                          <span className="machine-brand">{machine.marca}</span>
+                          <span className="machine-capacity">{machine.capacidad}</span>
+                        </div>
+                      </div>
+                      {machine.current_service && (
+                        <div className="current-service-info">
+                          <span className="service-badge">En servicio</span>
+                          <span className="service-time">Fin: {calculateEndTime(machine.current_service)}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
