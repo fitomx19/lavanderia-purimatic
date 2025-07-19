@@ -148,7 +148,7 @@ class SaleService:
                 }
                 if machine.get('tipo') == 'lavadora':
                     self.washer_repository.upsert({'_id': machine_id, **update_data})
-                elif machine.get('tipo') == 'secadora'   in machine:
+                elif machine.get('tipo') == 'secadora':
                     self.dryer_repository.upsert({'_id': machine_id, **update_data})
                 else:
                     logger.warning(f"Tipo de máquina desconocido para {machine_id}. No se pudo actualizar el estado a ocupada.")
@@ -242,7 +242,7 @@ class SaleService:
                 
                 # Calcular precio y duración
                 price = float(cycle.get('price', 0)) # Cambiado de 'precio' a 'price'
-                duration = cycle.get('duracion', 30)
+                duration = cycle.get('duration_minutes', 30)
                 
                 # Actualizar item con datos calculados
                 service_item['price'] = float(price)
@@ -574,13 +574,19 @@ class SaleService:
                 }
             }
             
+            updated_machine = None
             if machine.get('tipo') == 'lavadora': # Asumiendo 'tipo' existe para lavadoras
                 self.washer_repository.update_document_by_id(machine_id, update_operators)
+                updated_machine = self.washer_repository.find_by_id(machine_id)
             elif machine.get('tipo') == 'secadora' or 'capacidad' in machine: # Secadoras no siempre tienen 'tipo', pero tienen 'capacidad'
                 self.dryer_repository.update_document_by_id(machine_id, update_operators)
+                updated_machine = self.dryer_repository.find_by_id(machine_id)
             else:
                 logger.warning(f"Tipo de máquina desconocido para {machine_id}. No se pudo actualizar el servicio actual de la máquina.")
                 return False, None, None # Devuelve False y None para los tiempos
+            
+            if updated_machine:
+                self._emit_machine_update(machine_id, updated_machine, 'activated')
 
             logger.info(f"Servicio activado en máquina {machine_id} para venta {sale_id}, servicio {service_index}. Fin estimado: {estimated_end_time}")
             return True, current_time, estimated_end_time # Devuelve True y los tiempos
@@ -615,13 +621,20 @@ class SaleService:
                             '$set': {'estado': 'disponible'},
                             '$unset': {'current_service': ''} # Usar $unset directamente
                         }
+                        updated_machine = None
                         if machine.get('tipo') == 'lavadora': # Asumiendo 'tipo' existe para lavadoras
                             self.washer_repository.update_document_by_id(machine_id, update_operators)
+                            updated_machine = self.washer_repository.find_by_id(machine_id)
                         elif machine.get('tipo') == 'secadora' or 'capacidad' in machine: # Secadoras no siempre tienen 'tipo', pero tienen 'capacidad'
                             self.dryer_repository.update_document_by_id(machine_id, update_operators)
+                            updated_machine = self.dryer_repository.find_by_id(machine_id)
                         else:
                             logger.warning(f"Tipo de máquina desconocido para {machine_id}. No se pudo actualizar el estado de la máquina.")
                             continue # Salta a la siguiente iteración si no se puede actualizar la máquina
+                        
+                        if updated_machine:
+                            self._emit_machine_update(machine_id, updated_machine, 'available')
+
                         logger.info(f"Máquina {machine_id} desactivada. Fin de servicio en venta {sale_id}.")
                         
                         # Actualizar estado del servicio en la venta a 'completed'
@@ -676,3 +689,17 @@ class SaleService:
         except Exception as e:
             logger.error(f"Error al finalizar venta {sale_id}: {e}")
             return {'success': False, 'message': 'Error interno del servidor al finalizar la venta'} 
+
+    def _emit_machine_update(self, machine_id, machine_data, operation):
+        """Emitir evento WebSocket cuando cambia estado de máquina"""
+        try:
+            from app import socketio
+            socketio.emit('machine_updated', {
+                'machine_id': machine_id,
+                'machine_data': machine_data,
+                'operation': operation,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            logger.info(f"Evento emitido: máquina {machine_id} - {operation}")
+        except Exception as e:
+            logger.error(f"Error emitiendo evento de máquina: {e}") 

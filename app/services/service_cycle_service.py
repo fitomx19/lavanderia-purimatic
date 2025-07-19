@@ -227,7 +227,7 @@ class ServiceCycleService:
         Obtener ciclos por tipo de servicio
         
         Args:
-            service_type: Tipo de servicio (lavado, secado, combo, encargo_lavado, encargo_secado, mixto, mixto_encargo)
+            service_type: Tipo de servicio (lavado, secado, encargo_lavado)
             
         Returns:
             Dict: Lista de ciclos del tipo especificado

@@ -5,11 +5,14 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 import logging
 from flask_socketio import SocketIO # Importar SocketIO
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 # Instancia global de MongoDB
 mongo_client = None
 db = None
 socketio = None # Añadir una instancia global para SocketIO
+scheduler = None # Añadir una instancia global para el scheduler
 
 def create_app(config_class):
     """
@@ -39,6 +42,9 @@ def create_app(config_class):
     
     # Configurar manejo de errores
     configure_error_handlers(app)
+    
+    # Inicializar scheduler de monitoreo
+    init_scheduler(app)
     
     return app
 
@@ -152,3 +158,34 @@ def get_db():
     if db is None:
         raise RuntimeError("Base de datos no inicializada")
     return db
+
+def init_scheduler(app):
+    """Inicializar scheduler para monitoreo automático de máquinas"""
+    global scheduler
+    
+    try:
+        if not scheduler:
+            scheduler = BackgroundScheduler()
+            
+            # Importar aquí para evitar imports circulares
+            from app.services.machine_monitor import machine_monitor
+            
+            # Programar verificación cada 30 segundos
+            scheduler.add_job(
+                func=machine_monitor.check_and_notify_completed_services,
+                trigger="interval",
+                seconds=30,
+                id='machine_monitor',
+                name='Monitor de máquinas y servicios',
+                replace_existing=True
+            )
+            
+            # Iniciar scheduler
+            scheduler.start()
+            app.logger.info("✅ Scheduler de monitoreo iniciado - verificando cada 30 segundos")
+            
+            # Asegurar que el scheduler se cierre correctamente al terminar la aplicación
+            atexit.register(lambda: scheduler.shutdown() if scheduler else None)
+            
+    except Exception as e:
+        app.logger.error(f"❌ Error al inicializar scheduler: {e}")

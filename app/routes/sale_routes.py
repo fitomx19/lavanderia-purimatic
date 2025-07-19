@@ -252,3 +252,44 @@ def deactivate_machines(current_user):
 
     except Exception as e:
         return error_response('Error interno del servidor', 500) 
+
+@sale_bp.route('/sales/monitor-status', methods=['GET'])
+@admin_required
+def get_monitor_status(current_user):
+    """
+    Obtener estado del monitor de máquinas
+    GET /api/sales/monitor-status
+    """
+    try:
+        from app.services.machine_monitor import machine_monitor
+        status = machine_monitor.get_status()
+        
+        return success_response(
+            data=status,
+            message='Estado del monitor obtenido exitosamente'
+        )
+        
+    except Exception as e:
+        return error_response('Error interno del servidor', 500)
+
+@sale_bp.route('/sales/check-services-now', methods=['POST'])
+@admin_required
+def check_services_now(current_user):
+    """
+    Forzar verificación inmediata de servicios completados
+    POST /api/sales/check-services-now
+    """
+    try:
+        from app.services.machine_monitor import machine_monitor
+        result = machine_monitor.check_and_notify_completed_services()
+        
+        if result['success']:
+            return success_response(
+                data={'updated_count': result.get('updated_count', 0)},
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 500)
+            
+    except Exception as e:
+        return error_response('Error interno del servidor', 500)

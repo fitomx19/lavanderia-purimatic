@@ -92,7 +92,8 @@ class ServiceCycleRepository(BaseRepository):
         if exclude_id:
             filter_criteria = {
                 'name': name,
-                '_id': {'$ne': ObjectId(exclude_id)}
+                '_id': {'$ne': ObjectId(exclude_id)},
+                'is_active': True
             }
         else:
             filter_criteria = {'name': name}
@@ -111,7 +112,42 @@ class ServiceCycleRepository(BaseRepository):
         """
         cycle = self.find_by_id(cycle_id)
         if cycle:
-            return float(cycle.get('price', 0))
+            # Para servicios normales (lavado, secado)
+            if cycle.get('price'):
+                return float(cycle.get('price', 0))
+            # Para encargo_lavado, devuelve None ya que el precio depende del peso
+            return None
+        return None
+    
+    def get_cycle_price_per_kg(self, cycle_id: str) -> Optional[float]:
+        """
+        Obtener precio por kilogramo de un ciclo de encargo_lavado
+        
+        Args:
+            cycle_id: ID del ciclo
+            
+        Returns:
+            float: Precio por kilogramo del ciclo o None si no existe o no es encargo_lavado
+        """
+        cycle = self.find_by_id(cycle_id)
+        if cycle and cycle.get('service_type') == 'encargo_lavado':
+            return float(cycle.get('price_per_kg', 0))
+        return None
+    
+    def calculate_encargo_price(self, cycle_id: str, weight_kg: float) -> Optional[float]:
+        """
+        Calcular precio total para un servicio de encargo_lavado basado en el peso
+        
+        Args:
+            cycle_id: ID del ciclo
+            weight_kg: Peso en kilogramos
+            
+        Returns:
+            float: Precio total calculado o None si no es válido
+        """
+        price_per_kg = self.get_cycle_price_per_kg(cycle_id)
+        if price_per_kg and weight_kg > 0:
+            return price_per_kg * weight_kg
         return None
     
     def validate_cycle_for_machine(self, cycle_id: str, machine_id: str, machine_type: str) -> Dict[str, Any]:

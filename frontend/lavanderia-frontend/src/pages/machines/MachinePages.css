@@ -1,299 +1,556 @@
+/* Diseño Ultra Moderno e Interactivo para Máquinas */
+
 .machines-layout {
-  /* display: flex; Eliminado ya que el sidebar no está */
   min-height: 100vh;
-  background-color: #f4f7f6;
-  padding: 2rem;
+  background-color: #f8f9fa;
+  padding: 1rem;
 }
 
 .machines-content {
-  max-width: 1200px; /* Limitar el ancho máximo para mejor legibilidad */
-  margin: 0 auto; /* Centrar el contenido */
-  padding: 2rem; /* Ajustar padding */
-  background-color: #ffffff; /* Fondo blanco para el contenido principal */
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
-  color: #333;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid #e9ecef;
 }
 
-.machines-content h1 {
+/* Header con estadísticas */
+.machines-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.machines-header h1 {
+  font-size: 3rem;
+  font-weight: 800;
   color: #2c3e50;
-  margin-bottom: 2.5rem; /* Más espacio debajo del título principal */
-  text-align: center;
-  font-size: 2.5rem; /* Aumentar tamaño de fuente */
-  font-weight: 700;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.machines-section {
+.quick-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
   background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  margin-bottom: 3rem; /* Más espacio entre secciones */
-  border: none; /* Eliminar borde para un look más limpio */
+  padding: 1.5rem 2rem;
+  border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-width: 160px;
 }
 
-.machines-section h2 {
-  color: #34495e;
-  margin-bottom: 2rem; /* Más espacio debajo de los subtítulos de sección */
-  text-align: center;
-  border-bottom: 3px solid #e0e0e0; /* Borde inferior más pronunciado */
-  padding-bottom: 15px;
-  font-size: 2rem;
-  font-weight: 600;
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.machine-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Ajustar minmax */
-  gap: 1.5rem; /* Más espacio entre elementos del formulario */
-  margin-bottom: 3rem; /* Más espacio debajo del formulario */
-  padding: 2rem;
-  border: 1px solid #dcdcdc; /* Borde más sutil */
-  border-radius: 10px;
-  background-color: #fefefe;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+.stat-icon {
+  font-size: 2.5rem;
+  animation: pulse 2s infinite;
 }
 
-.machine-form h3 {
-  grid-column: 1 / -1;
-  color: #4e6a81;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  font-size: 1.8rem;
-  font-weight: 500;
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
-.machine-form input,
-.machine-form select {
-  padding: 1rem;
-  border: 1px solid #a0a0a0; /* Borde más oscuro para contraste */
-  border-radius: 6px;
-  font-size: 1.1rem;
-  width: 100%;
-  box-sizing: border-box; /* Incluir padding y borde en el ancho total */
-}
-
-.machine-form input:focus,
-.machine-form select:focus {
-  outline: none;
-  border-color: #007bff; /* Color de enfoque azul */
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-}
-
-.machine-form button {
-  grid-column: 1 / -1;
-  padding: 1.2rem 2rem;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.machine-form button:hover {
-  background-color: #218838;
-  transform: translateY(-2px);
-}
-
-.machine-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Ajustar minmax */
-  gap: 2rem; /* Más espacio entre tarjetas */
-}
-
-.machine-card {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 2rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Sombra más suave y extendida */
+.stat-info {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  align-items: flex-start;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2c3e50;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Grid de máquinas */
+.machines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+/* Cards de máquinas */
+.machine-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.machine-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #667eea;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.machine-card:hover::before {
+  transform: scaleX(1);
 }
 
 .machine-card:hover {
-  transform: translateY(-7px); /* Efecto de elevación más pronunciado */
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-.machine-card h3 {
-  color: #2c3e50;
-  margin-top: 0;
+.machine-card.selected {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  border-color: #667eea;
+}
+
+.machine-card.selected::before {
+  transform: scaleX(1);
+}
+
+/* Iconos de máquinas */
+.machine-icon {
+  font-size: 4rem;
+  text-align: center;
   margin-bottom: 1rem;
-  font-size: 1.6rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.washer-icon {
+  color: #3498db;
+  filter: drop-shadow(0 4px 8px rgba(52, 152, 219, 0.3));
+}
+
+.dryer-icon {
+  color: #e74c3c;
+  filter: drop-shadow(0 4px 8px rgba(231, 76, 60, 0.3));
+}
+
+/* Información de la máquina */
+.machine-info {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.machine-info h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.machine-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  color: white;
   font-weight: 600;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 0.5rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.machine-card p {
-  margin-bottom: 0.8rem;
-  color: #555;
-  font-size: 1.05rem;
-  line-height: 1.5;
+.status-icon {
+  font-weight: bold;
+  font-size: 1rem;
 }
 
-.card-actions {
+/* Botón de acciones */
+.machine-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.action-btn {
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Detalles expandidos */
+.machine-details {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #ecf0f1;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  background: rgba(102, 126, 234, 0.05);
+  padding: 1rem;
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
+}
+
+.detail-label {
+  display: block;
+  font-weight: 600;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+/* Controles de máquina */
+.machine-controls {
   display: flex;
   gap: 1rem;
-  margin-top: 1.5rem;
-  justify-content: flex-end; /* Alinear botones a la derecha */
+  justify-content: center;
 }
 
-.card-actions button {
-  padding: 0.8rem 1.5rem;
+.control-btn {
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 25px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
-  font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.card-actions button:first-child {
-  background-color: #007bff;
+.edit-btn {
+  background-color: #3498db;
   color: white;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
-.card-actions button:first-child:hover {
-  background-color: #0056b3;
-  transform: translateY(-1px);
+.edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
 }
 
-.card-actions button:last-child {
-  background-color: #dc3545;
+.delete-btn {
+  background-color: #e74c3c;
   color: white;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
 
-.card-actions button:last-child:hover {
-  background-color: #c82333;
-  transform: translateY(-1px);
+.delete-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
 }
 
-.edit-form {
+/* Cards para agregar máquinas */
+.add-machine-card {
+  background-color: #f8f9ff;
+  border: 2px dashed #667eea;
+  border-radius: 20px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.add-machine-card:hover {
+  background-color: #667eea;
+  color: white;
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.add-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.7;
+}
+
+.add-text h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.add-text p {
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  animation: modalSlideIn 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #ecf0f1;
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #7f8c8d;
+  transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+  color: #e74c3c;
+}
+
+/* Formularios */
+.add-form, .edit-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-row input,
+.form-row select,
+.add-form input,
+.add-form select,
 .edit-form input,
 .edit-form select {
-  padding: 0.9rem;
-  border: 1px solid #a0a0a0;
-  border-radius: 5px;
+  padding: 1rem;
+  border: 2px solid #ecf0f1;
+  border-radius: 10px;
   font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
 }
 
-.edit-form button {
-  padding: 0.9rem 1.5rem;
+.form-row input:focus,
+.form-row select:focus,
+.add-form input:focus,
+.add-form select:focus,
+.edit-form input:focus,
+.edit-form select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Botones de formulario */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.save-btn {
+  background-color: #27ae60;
+  color: white;
   border: none;
-  border-radius: 5px;
+  padding: 1rem 2rem;
+  border-radius: 25px;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.edit-form button[type="submit"] {
-  background-color: #17a2b8;
+.save-btn:hover {
+  background-color: #2ecc71;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.cancel-btn {
+  background-color: #95a5a6;
   color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.edit-form button[type="submit"]:hover {
-  background-color: #138496;
+.cancel-btn:hover {
+  background-color: #7f8c8d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
 }
 
-.edit-form button[type="button"] {
-  background-color: #6c757d;
-  color: white;
-}
-
-.edit-form button[type="button"]:hover {
-  background-color: #5a6268;
-}
-
+/* Mensajes de estado */
 .loading-message,
 .error-message {
   text-align: center;
   padding: 3rem;
   font-size: 1.5rem;
-  color: #555;
+  border-radius: 15px;
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.loading-message {
+  background-color: #3498db;
+  color: white;
+  animation: pulse 2s infinite;
 }
 
 .error-message {
-  color: #dc3545;
-  font-weight: bold;
-  background-color: #ffe0e0;
-  border-radius: 8px;
-  margin: 2rem auto;
-  max-width: 600px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.toggle-add-form-button {
-  display: block;
-  width: fit-content;
-  margin: 1.5rem auto 2.5rem auto; /* Centrar y añadir espacio */
-  padding: 1rem 2rem;
-  background-color: #007bff; /* Un color distinto para el botón de mostrar/ocultar */
+  background-color: #e74c3c;
   color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(231, 76, 60, 0.3);
 }
 
-.toggle-add-form-button:hover {
-  background-color: #0056b3;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
-}
-
-.form-actions {
-  grid-column: 1 / -1; /* Ocupa todas las columnas */
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end; /* Alinear botones a la derecha */
-  margin-top: 1rem;
-}
-
-.form-actions button {
-  padding: 0.9rem 1.5rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
-}
-
-.form-actions button[type="submit"] {
-  background-color: #28a745; /* Color verde para agregar */
-  color: white;
-}
-
-.form-actions button[type="submit"]:hover {
-  background-color: #218838;
-}
-
-.form-actions .cancel-button {
-  background-color: #6c757d; /* Color gris para cancelar */
-  color: white;
-}
-
-.form-actions .cancel-button:hover {
-  background-color: #5a6268;
-}
-
-/* Ajuste para el botón de formulario general si se necesita */
-.machine-form button[type="submit"] {
-    grid-column: unset; /* Deshacer el grid-column anterior si es necesario */
-    width: auto; /* Ajustar ancho si es necesario */
+/* Responsive */
+@media (max-width: 768px) {
+  .machines-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .quick-stats {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .stat-card {
+    min-width: 200px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .machine-controls {
+    flex-direction: column;
+  }
+  
+  .machines-header h1 {
+    font-size: 2rem;
+  }
 }

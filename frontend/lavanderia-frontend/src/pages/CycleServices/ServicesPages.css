@@ -535,3 +535,212 @@
     width: calc(100% - 18px);
   }
 }
+
+/* Dropdown de Máquinas Permitidas */
+.machines-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.machines-dropdown-trigger {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  justify-content: space-between;
+}
+
+.machines-dropdown-trigger:hover {
+  background-color: #e9ecef;
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.dropdown-arrow {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  color: #6c757d;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.machines-dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 400px;
+  overflow-y: auto;
+  animation: fadeInScale 0.2s ease;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.machines-dropdown-header {
+  background-color: #f8f9fa;
+  padding: 12px 16px;
+  border-bottom: 1px solid #dee2e6;
+  font-size: 14px;
+  color: #495057;
+  text-align: center;
+  border-radius: 7px 7px 0 0;
+}
+
+.machines-list {
+  padding: 8px 0;
+}
+
+.machine-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s ease;
+}
+
+.machine-item:last-child {
+  border-bottom: none;
+}
+
+.machine-item:hover {
+  background-color: #f8f9fa;
+}
+
+.machine-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.machine-type-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.machine-type-badge.lavadora {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.machine-type-badge.secadora {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.machine-type-badge.desconocido {
+  background-color: #f5f5f5;
+  color: #757575;
+}
+
+.machine-number {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.machine-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.machine-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.machine-detail strong {
+  color: #495057;
+  font-weight: 500;
+}
+
+.status-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Scroll personalizado para la lista de máquinas */
+.machines-dropdown-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.machines-dropdown-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.machines-dropdown-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.machines-dropdown-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive para el dropdown */
+@media (max-width: 768px) {
+  .machines-dropdown-content {
+    min-width: 280px;
+    max-width: 90vw;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .machines-dropdown-trigger {
+    font-size: 13px;
+    padding: 6px 10px;
+    min-width: 100px;
+  }
+  
+  .machine-item {
+    padding: 10px 12px;
+  }
+  
+  .machine-detail {
+    font-size: 12px;
+  }
+}
