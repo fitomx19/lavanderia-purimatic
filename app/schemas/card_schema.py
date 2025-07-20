@@ -4,7 +4,7 @@ import re
 
 class CardSchema(Schema):
     """
-    Schema para validación de tarjetas recargables
+    Schema para validación de tarjetas recargables, incluyendo campos NFC.
     """
     
     _id = fields.Str(dump_only=True)
@@ -26,6 +26,15 @@ class CardSchema(Schema):
     is_active = fields.Bool(missing=True)
     created_at = fields.DateTime(dump_only=True)
     last_used = fields.DateTime(dump_only=True)
+
+    # AGREGAR campos NFC
+    nfc_uid = fields.Str(
+        allow_none=True,
+        validate=validate.Length(min=8, max=20),
+        error_messages={'invalid': 'UID NFC debe tener entre 8 y 20 caracteres'}
+    )
+    is_nfc_enabled = fields.Bool(missing=False)
+    last_nfc_read = fields.DateTime(allow_none=True)
     
     @validates('card_number')
     def validate_card_number(self, value: str) -> None:
@@ -94,7 +103,7 @@ class CardTransferSchema(Schema):
 
 class CardResponseSchema(Schema):
     """
-    Schema para respuesta de tarjetas
+    Schema para respuesta de tarjetas, incluyendo campos NFC.
     """
     
     _id = fields.Str()
@@ -104,6 +113,10 @@ class CardResponseSchema(Schema):
     is_active = fields.Bool()
     created_at = fields.DateTime()
     last_used = fields.DateTime()
+    # AGREGAR campos NFC a la respuesta
+    nfc_uid = fields.Str()
+    is_nfc_enabled = fields.Bool()
+    last_nfc_read = fields.DateTime()
 
 # Instancias de esquemas para uso en la aplicación
 card_schema = CardSchema()

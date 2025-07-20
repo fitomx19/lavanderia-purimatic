@@ -215,6 +215,20 @@ class UserClientRepository(BaseRepository):
                                 ]
                             }
                         }
+                    },
+                    {
+                        '$project': {
+                            '_id': 1,
+                            'card_number': 1,
+                            'balance': 1,
+                            'client_id': 1,
+                            'created_at': 1,
+                            'is_active': 1,
+                            'updated_at': 1,
+                            'last_used': 1,
+                            'is_nfc_enabled': {'$ifNull': ['$is_nfc_enabled', False]},
+                            'nfc_uid': {'$ifNull': ['$nfc_uid', '']}
+                        }
                     }
                 ],
                 'as': 'client_cards'

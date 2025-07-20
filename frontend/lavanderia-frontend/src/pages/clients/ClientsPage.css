@@ -18,7 +18,8 @@ h1 {
 }
 
 .create-client-button,
-.transfer-balance-button {
+.transfer-balance-button,
+.query-balance-nfc-button {
   background-color: #28a745;
   color: white;
   padding: 10px 20px;
@@ -30,8 +31,17 @@ h1 {
 }
 
 .create-client-button:hover,
-.transfer-balance-button:hover {
+.transfer-balance-button:hover,
+.query-balance-nfc-button:hover {
   background-color: #218838;
+}
+
+.query-balance-nfc-button {
+  background-color: #17a2b8;
+}
+
+.query-balance-nfc-button:hover {
+  background-color: #138496;
 }
 
 .create-client-form,
@@ -364,3 +374,124 @@ h1 {
 .add-subtract-balance-modal button[type="button"]:hover {
   background-color: #5a6268;
 }
+
+
+/* ========== ESTILOS NFC ========== */
+.nfc-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.7); display: flex;
+  justify-content: center; align-items: center; z-index: 1000;
+}
+
+.nfc-modal-content {
+  background: white; padding: 25px; border-radius: 12px;
+  width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.nfc-reader-status {
+  padding: 12px; border-radius: 8px; margin-bottom: 15px;
+  font-weight: bold; text-align: center;
+}
+
+.nfc-reader-status.connected {
+  background-color: #d4edda; color: #155724; border: 2px solid #c3e6cb;
+}
+
+.nfc-reader-status.disconnected {
+  background-color: #f8d7da; color: #721c24; border: 2px solid #f1aeb5;
+}
+
+.nfc-action-button {
+  background: linear-gradient(45deg, #007bff, #0056b3);
+  color: white; padding: 15px 25px; border: none; border-radius: 8px;
+  cursor: pointer; font-size: 16px; width: 100%; font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.nfc-action-button:hover:not(:disabled) {
+  transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+}
+
+.nfc-action-button:disabled {
+  background: #6c757d; cursor: not-allowed; transform: none;
+}
+
+.nfc-link-btn { background-color: #28a745; color: white; margin: 2px; }
+.nfc-reload-btn { background-color: #007bff; color: white; margin: 2px; }
+
+.nfc-waiting, .nfc-reading { text-align: center; padding: 20px; }
+
+.nfc-success {
+  text-align: center; color: #155724; background-color: #d4edda;
+  padding: 15px; border-radius: 8px; font-weight: bold;
+}
+
+.nfc-error {
+  text-align: center; color: #721c24; background-color: #f8d7da;
+  padding: 15px; border-radius: 8px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
+  border-radius: 50%; width: 40px; height: 40px;
+  animation: spin 1s linear infinite; margin: 0 auto 10px;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.reload-amount-section { margin-bottom: 20px; }
+.reload-amount-section input {
+  width: 100%; padding: 10px; border: 2px solid #ddd;
+  border-radius: 6px; font-size: 16px; margin-top: 5px;
+ }
+ 
+ .card-info {
+  background-color: #f8f9fa; padding: 15px; border-radius: 8px;
+  margin-bottom: 15px; border-left: 4px solid #007bff;
+ }
+ 
+ .query-result-info {
+  background-color: #e8f5e8; padding: 20px; border-radius: 8px;
+  margin-bottom: 15px; border-left: 4px solid #28a745;
+ }
+ 
+ .query-result-info h3 {
+  color: #155724; margin-bottom: 15px; text-align: center;
+ }
+ 
+ .query-result-info .card-info {
+  background-color: #fff; border-left: 4px solid #28a745;
+ }
+ 
+ .nfc-logs {
+  margin-top: 20px; padding: 15px; background-color: #f8f9fa;
+  border-radius: 8px; border: 1px solid #e9ecef;
+ }
+ 
+ .logs-container {
+  max-height: 150px; overflow-y: auto; margin-top: 10px;
+ }
+ 
+ .log-entry {
+  padding: 5px 10px; margin: 2px 0; background-color: #fff;
+  border-radius: 4px; border-left: 3px solid #007bff;
+  font-family: monospace; font-size: 14px;
+ }
+ 
+ .close-button-bottom {
+  width: 100%; padding: 10px; margin-top: 20px;
+  background-color: #6c757d; color: white; border: none;
+  border-radius: 6px; cursor: pointer;
+ }
+ 
+ .nfc-status-indicator {
+  margin-bottom: 15px; text-align: center;
+ }
+ 
+ /* Responsive */
+ @media (max-width: 768px) {
+  .nfc-modal-content { width: 95%; padding: 20px; }
+  .cards-table { font-size: 12px; }
+  .cards-table th, .cards-table td { padding: 8px 4px; }
+ }

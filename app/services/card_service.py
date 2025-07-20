@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 class CardService:
     """
-    Servicio para manejo de tarjetas recargables con lógica de negocio
+    Servicio para manejo de tarjetas recargables con lógica de negocio.
+    Incluye operaciones de vinculación y recarga mediante NFC.
     """
     
     def __init__(self):
@@ -48,9 +49,14 @@ class CardService:
             
             # Validar datos
             validated_data = card_schema.load(card_data)
+            if not isinstance(validated_data, dict):
+                return {
+                    'success': False,
+                    'message': 'Datos de entrada inválidos después de validación'
+                }
             
             # Verificar que el número de tarjeta no exista
-            if self.card_repository.card_number_exists(validated_data['card_number']):
+            if self.card_repository.card_number_exists(validated_data.get('card_number')):
                 return {
                     'success': False,
                     'message': 'El número de tarjeta ya existe'
@@ -64,7 +70,7 @@ class CardService:
                 card_balance = validated_data.get('balance', 0)
                 if card_balance > 0:
                     # Actualizar saldo del cliente con el saldo inicial de la tarjeta
-                    current_balance = client.get('saldo_tarjeta_recargable', 0)
+                    current_balance = client.get('saldo_tarjeta_recargable', 0) if client else 0
                     new_balance = current_balance + float(card_balance)
                     
                     # Actualizar cliente con el nuevo saldo
@@ -161,8 +167,8 @@ class CardService:
             # Actualizar saldo
             updated_card = self.card_repository.update_balance(
                 card_id, 
-                float(validated_data['amount']), 
-                validated_data['operation']
+                float(validated_data.get('amount', 0)), 
+                str(validated_data.get('operation', ''))
             )
             
             if updated_card:
@@ -208,9 +214,9 @@ class CardService:
             
             # Realizar transferencia
             result = self.card_repository.transfer_balance(
-                validated_data['from_card_id'],
-                validated_data['to_card_id'],
-                float(validated_data['amount'])
+                str(validated_data.get('from_card_id', '')),
+                str(validated_data.get('to_card_id', '')),
+                float(validated_data.get('amount', 0))
             )
             
             return result
@@ -333,3 +339,66 @@ class CardService:
                 'valid': False,
                 'message': 'Error interno del servidor'
             } 
+
+    def link_nfc_to_card(self, card_id: str) -> Dict[str, Any]:
+        """
+        Vincular tarjeta con UID NFC físico.
+        
+        Args:
+            card_id: ID de la tarjeta a vincular con un dispositivo NFC.
+        
+        Returns:
+            Dict: Resultado de la operación de vinculación.
+        """
+        try:
+            from app.services.nfc_integration_service import NFCIntegrationService
+            nfc_service = NFCIntegrationService()
+            # Se delega la lógica de vinculación al servicio de integración NFC.
+            return nfc_service.link_card_to_nfc(card_id)
+        except Exception as e:
+            logger.error(f"Error vinculando NFC: {e}")
+            return {
+                'success': False,
+                'message': 'Error al vincular tarjeta NFC'
+            }
+
+    def reload_card_via_nfc(self, amount: float) -> Dict[str, Any]:
+        """
+        Recargar tarjeta mediante lectura NFC.
+        
+        Args:
+            amount: Monto a recargar en la tarjeta detectada por NFC.
+        
+        Returns:
+            Dict: Resultado de la operación de recarga.
+        """
+        try:
+            from app.services.nfc_integration_service import NFCIntegrationService
+            nfc_service = NFCIntegrationService()
+            # Se delega la lógica de recarga al servicio de integración NFC.
+            return nfc_service.reload_card_via_nfc(amount)
+        except Exception as e:
+            logger.error(f"Error recargando via NFC: {e}")
+            return {
+                'success': False,
+                'message': 'Error al recargar tarjeta NFC'
+            }
+
+    def query_balance_via_nfc(self) -> Dict[str, Any]:
+        """
+        Consultar saldo de tarjeta mediante lectura NFC.
+        
+        Returns:
+            Dict: Información del saldo y propietario de la tarjeta.
+        """
+        try:
+            from app.services.nfc_integration_service import NFCIntegrationService
+            nfc_service = NFCIntegrationService()
+            # Se delega la lógica de consulta al servicio de integración NFC.
+            return nfc_service.query_balance_via_nfc()
+        except Exception as e:
+            logger.error(f"Error consultando saldo via NFC: {e}")
+            return {
+                'success': False,
+                'message': 'Error al consultar saldo via NFC'
+            }

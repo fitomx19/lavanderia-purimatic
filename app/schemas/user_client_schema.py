@@ -164,6 +164,8 @@ class CardSchemaForClientResponse(Schema):
     is_active = fields.Bool()
     updated_at = fields.DateTime()
     last_used = fields.DateTime(allow_none=True)
+    is_nfc_enabled = fields.Bool(allow_none=True)
+    nfc_uid = fields.Str(allow_none=True)
 
 # Instancias de esquemas para uso en la aplicación
 user_client_schema = UserClientSchema()

@@ -220,3 +220,24 @@ class CardRepository(BaseRepository):
         """
         from datetime import datetime
         return datetime.utcnow() 
+
+    def update_nfc_uid(self, card_id: str, nfc_uid: str) -> Optional[Dict[str, Any]]:
+        """Asociar UID NFC con tarjeta"""
+        updated_data = {
+            '_id': card_id,
+            'nfc_uid': nfc_uid,
+            'is_nfc_enabled': True,
+            'last_nfc_read': self._get_current_datetime()
+        }
+        return self.upsert(updated_data)
+
+    def find_by_nfc_uid(self, nfc_uid: str) -> Optional[Dict[str, Any]]:
+        """Encontrar tarjeta por UID NFC"""
+        return self.find_one({'nfc_uid': nfc_uid, 'is_active': True})
+
+    def nfc_uid_exists(self, nfc_uid: str, exclude_id: Optional[str] = None) -> bool:
+        """Verificar si UID NFC ya está en uso"""
+        filter_criteria = {'nfc_uid': nfc_uid}
+        if exclude_id:
+            filter_criteria['_id'] = {'$ne': ObjectId(exclude_id)}
+        return self.find_one(filter_criteria) is not None

@@ -161,4 +161,82 @@ def get_card_balance(current_user, card_id):
             return error_response(result['message'], 404)
             
     except Exception as e:
-        return error_response('Error interno del servidor', 500) 
+        return error_response('Error interno del servidor', 500)
+
+@card_bp.route('/cards/<card_id>/link-nfc', methods=['POST'])
+@employee_required
+def link_card_nfc(current_user, card_id):
+    """
+    Vincular tarjeta lógica con UID NFC físico
+    POST /api/cards/{card_id}/link-nfc
+    """
+    try:
+        result = card_service.link_nfc_to_card(card_id)
+        if result['success']:
+            return success_response(data=result['data'], message=result['message'])
+        else:
+            return error_response(result['message'], 400)
+    except Exception as e:
+        return error_response('Error interno del servidor', 500)
+
+@card_bp.route('/cards/reload-nfc', methods=['POST'])
+@employee_required
+def reload_card_nfc(current_user):
+    """
+    Recargar tarjeta mediante lectura NFC
+    POST /api/cards/reload-nfc
+    """
+    try:
+        if not request.is_json or not request.get_json():
+            return error_response('Datos JSON requeridos', 400)
+        
+        data = request.get_json()
+        amount = float(data.get('amount', 0))
+        
+        if amount <= 0:
+            return error_response('Monto debe ser mayor a 0', 400)
+        
+        result = card_service.reload_card_via_nfc(amount)
+        if result['success']:
+            return success_response(data=result['data'], message=result['message'])
+        else:
+            return error_response(result['message'], 400)
+    except Exception as e:
+        return error_response('Error interno del servidor', 500)
+
+@card_bp.route('/nfc/status', methods=['GET'])
+@employee_required
+def get_nfc_status(current_user):
+    """
+    Obtener estado del lector NFC
+    GET /api/nfc/status
+    """
+    try:
+        from app.services.nfc_client_service import NFCClientService
+        nfc_client = NFCClientService()
+        result = nfc_client.get_status()
+        return success_response(data=result, message="Estado NFC obtenido")
+    except Exception as e:
+        return error_response('Error al consultar estado NFC', 500)
+
+@card_bp.route('/cards/query-balance-nfc', methods=['POST'])
+@employee_required
+def query_balance_nfc(current_user):
+    """
+    Consultar saldo de tarjeta mediante lectura NFC
+    POST /api/cards/query-balance-nfc
+    """
+    try:
+        result = card_service.query_balance_via_nfc()
+        if result['success']:
+            return success_response(
+                data=result['data'], 
+                message=result['message']
+            )
+        else:
+            return error_response(
+                message=result['message'],
+                status_code=400
+            )
+    except Exception as e:
+        return error_response('Error interno del servidor', 500)

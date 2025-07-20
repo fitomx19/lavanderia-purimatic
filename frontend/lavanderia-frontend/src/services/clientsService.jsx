@@ -168,7 +168,59 @@ export const deleteCard = async (cardId) => {
     throw error.response ? error.response.data : new Error('Error de conexión al eliminar tarjeta');
   }
 };
+export const getNFCStatus = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_BASE_URL}/api/nfc/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error al consultar estado NFC');
+  }
+};
 
+export const linkCardToNFC = async (cardId) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_BASE_URL}/api/cards/${cardId}/link-nfc`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error al vincular tarjeta NFC');
+  }
+};
+
+export const reloadCardViaNFC = async (amount) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_BASE_URL}/api/cards/reload-nfc`, { amount }, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error al recargar tarjeta NFC');
+  }
+};
+
+export const queryBalanceViaNFC = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_BASE_URL}/api/cards/query-balance-nfc`, {}, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error al consultar saldo NFC');
+  }
+};
 /* import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';

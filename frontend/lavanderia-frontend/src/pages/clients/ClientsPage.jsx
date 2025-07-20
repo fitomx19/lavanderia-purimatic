@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getClients, deleteClient, createClient, updateClient, createClientCard, getClientCards, addSubtractCardBalance, transferCardBalance, getCardBalance, deleteCard } from '../../services/clientsService';
+import { getClients, deleteClient, createClient, updateClient, createClientCard, getClientCards, addSubtractCardBalance, transferCardBalance, getCardBalance, deleteCard, getNFCStatus, linkCardToNFC, reloadCardViaNFC, queryBalanceViaNFC } from '../../services/clientsService';
 import Header from '../../components/layout/Header';
 import './ClientsPage.css';
 
@@ -39,6 +39,17 @@ const ClientsPage = () => {
   const [transferAmount, setTransferAmount] = useState('');
 
 
+  // ========== ESTADOS NFC ==========
+  const [showNFCModal, setShowNFCModal] = useState(false);
+  const [nfcOperation, setNfcOperation] = useState(null); // 'linking' | 'reloading' | 'querying'
+  const [nfcStatus, setNfcStatus] = useState('idle'); // 'idle' | 'waiting' | 'reading' | 'success' | 'error'
+  const [selectedCardForNFC, setSelectedCardForNFC] = useState(null);
+  const [reloadAmount, setReloadAmount] = useState('');
+  const [nfcReaderStatus, setNfcReaderStatus] = useState({ connected: false });
+  const [nfcLogs, setNfcLogs] = useState([]);
+  const [queryResult, setQueryResult] = useState(null);
+
+
   const fetchClients = async () => {
     try {
       const data = await getClients(currentPage, perPage);
@@ -57,13 +68,20 @@ const ClientsPage = () => {
     fetchClients();
   }, [currentPage, perPage]);
 
+  // ========== EFFECT NFC ==========
+  useEffect(() => {
+    checkNFCStatus();
+    const interval = setInterval(checkNFCStatus, 30000); // Verifica cada 30 segundos el estado del lector NFC
+    return () => clearInterval(interval);
+  }, []);
+
   const handleDeleteClient = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
       try {
         await deleteClient(id);
         setClients(clients.filter(client => client._id !== id));
         alert('Cliente eliminado exitosamente.');
-        fetchClients();
+        fetchClients(); // Añadido para recargar clientes después de eliminar uno
       } catch (err) {
         setError(err.message);
       }
@@ -87,7 +105,7 @@ const ClientsPage = () => {
         direccion: '',
       });
       setShowCreateForm(false);
-      fetchClients();
+      fetchClients(); // Añadido para recargar clientes después de crear uno
     } catch (err) {
       setError(err.message);
     }
@@ -109,7 +127,7 @@ const ClientsPage = () => {
       await updateClient(editingClient._id, editFormData);
       alert('Cliente actualizado exitosamente.');
       setEditingClient(null);
-      fetchClients();
+      fetchClients(); // Añadido para recargar clientes después de actualizar uno
     } catch (err) {
       setError(err.message);
     }
@@ -144,6 +162,7 @@ const ClientsPage = () => {
       alert('Tarjeta creada exitosamente.');
       setNewCardBalance('');
       handleManageCardsClick(selectedClientForCard); // Refresh cards
+      fetchClients(); // Añadido para recargar clientes después de crear una tarjeta
     } catch (err) {
       setError(err.message);
     }
@@ -155,6 +174,7 @@ const ClientsPage = () => {
         await deleteCard(cardId);
         alert('Tarjeta eliminada exitosamente.');
         handleManageCardsClick(selectedClientForCard); // Refresh cards
+        fetchClients(); // Añadido para recargar clientes después de eliminar una tarjeta
       } catch (err) {
         setError(err.message);
       }
@@ -175,6 +195,7 @@ const ClientsPage = () => {
       alert('Saldo de tarjeta actualizado exitosamente.');
       setShowAddSubtractBalanceModal(false);
       handleManageCardsClick(selectedClientForCard); // Refresh cards
+      fetchClients(); // Añadido para recargar clientes después de actualizar el saldo
     } catch (err) {
       setError(err.message);
     }
@@ -189,11 +210,115 @@ const ClientsPage = () => {
       setToCardId('');
       setTransferAmount('');
       handleManageCardsClick(selectedClientForCard); // Refresh cards for the selected client
+      fetchClients(); // Añadido para recargar clientes después de transferir saldo
     } catch (err) {
       setError(err.message);
     }
   };
 
+  // ========== FUNCIONES NFC ==========
+  const checkNFCStatus = async () => {
+    try {
+      const result = await getNFCStatus();
+      setNfcReaderStatus(result.data);
+    } catch (err) {
+      console.error('Error checking NFC status:', err);
+      setNfcReaderStatus({ connected: false, error: err.message });
+    }
+  };
+
+  const handleLinkNFCClick = (card) => {
+    setSelectedCardForNFC(card);
+    setNfcOperation('linking');
+    setNfcStatus('idle');
+    setNfcLogs([]);
+    setShowNFCModal(true);
+  };
+
+  const handleReloadNFCClick = (card) => {
+    setSelectedCardForNFC(card);
+    setNfcOperation('reloading');
+    setNfcStatus('idle');
+    setReloadAmount('');
+    setNfcLogs([]);
+    setShowNFCModal(true);
+  };
+
+  const handleQueryBalanceNFCClick = () => {
+    setSelectedCardForNFC(null);
+    setNfcOperation('querying');
+    setNfcStatus('idle');
+    setNfcLogs([]);
+    setQueryResult(null);
+    setShowNFCModal(true);
+  };
+
+  const handleNFCOperation = async () => {
+    setNfcStatus('waiting');
+    setNfcLogs(['🔄 Iniciando operación NFC...']);
+
+    try {
+      if (nfcOperation === 'linking') {
+        setNfcStatus('reading');
+        setNfcLogs(prev => [...prev, '📖 Acerque su tarjeta al lector...']);
+
+        const result = await linkCardToNFC(selectedCardForNFC._id);
+
+        setNfcLogs(prev => [...prev, ...(result.data?.logs || []), '✅ Vinculación exitosa']);
+        setNfcStatus('success');
+        alert(`Tarjeta vinculada exitosamente con UID: ${result.data?.nfc_uid}`);
+
+        // Refresh cards
+        const clientCards = await getClientCards(selectedClientForCard._id);
+        setCurrentClientCards(clientCards.data || []);
+        fetchClients(); // Añadido para recargar clientes después de vincular NFC
+
+      } else if (nfcOperation === 'reloading') {
+        if (!reloadAmount || parseFloat(reloadAmount) <= 0) {
+          alert('Ingrese un monto válido para recargar');
+          setNfcStatus('idle');
+          return;
+        }
+
+        setNfcStatus('reading');
+        setNfcLogs(prev => [...prev, `💳 Acerque tarjeta para recargar $${reloadAmount}...`]);
+
+        const result = await reloadCardViaNFC(parseFloat(reloadAmount));
+
+        setNfcLogs(prev => [...prev, ...(result.data?.logs || []), `✅ Recarga exitosa: $${result.data?.new_balance}`]);
+        setNfcStatus('success');
+        alert(`Recarga exitosa. Nuevo saldo: $${result.data?.new_balance}`);
+
+        // Refresh cards
+        const clientCards = await getClientCards(selectedClientForCard._id);
+        setCurrentClientCards(clientCards.data || []);
+        fetchClients(); // Añadido para recargar clientes después de recargar NFC
+        
+      } else if (nfcOperation === 'querying') {
+        setNfcStatus('reading');
+        setNfcLogs(prev => [...prev, '💳 Acerque tarjeta para consultar saldo...']);
+
+        const result = await queryBalanceViaNFC();
+
+        setNfcLogs(prev => [...prev, ...(result.data?.logs || []), '✅ Consulta exitosa']);
+        setNfcStatus('success');
+        setQueryResult(result.data);
+      }
+
+      setTimeout(() => {
+        if (nfcOperation !== 'querying') {
+          setShowNFCModal(false);
+          setNfcStatus('idle');
+        }
+      }, 3000);
+
+    } catch (err) {
+      setNfcStatus('error');
+      setError(err.message);
+      setNfcLogs(prev => [...prev, `❌ Error: ${err.message}`]);
+      setTimeout(() => setNfcStatus('idle'), 5000);
+    }
+  };
 
   if (loading) {
     return <div>Cargando clientes...</div>;
@@ -210,6 +335,9 @@ const ClientsPage = () => {
       <div className="controls-section">
         <button onClick={() => setShowCreateForm(!showCreateForm)} className="create-client-button">
           {showCreateForm ? 'Cancelar' : 'Agregar Nuevo Cliente'}
+        </button>
+        <button onClick={handleQueryBalanceNFCClick} className="query-balance-nfc-button">
+          🔍 Consultar Saldo NFC
         </button>
       </div>
 
@@ -298,6 +426,11 @@ const ClientsPage = () => {
         <div className="card-modal">
           <div className="card-modal-content">
             <div className="modal-header">
+            <div className="nfc-status-indicator">
+                <div className={`nfc-reader-status ${nfcReaderStatus.connected ? 'connected' : 'disconnected'}`}>
+                  Lector NFC: {nfcReaderStatus.connected ? '🟢 Conectado' : '🔴 Desconectado'}
+                </div>
+              </div>
               <h2>Tarjetas de {selectedClientForCard.nombre}</h2>
               <button onClick={() => setShowCardModal(false)} className="close-button">X</button>
             </div>
@@ -315,29 +448,42 @@ const ClientsPage = () => {
             </form>
             <h3>Tarjetas Existentes</h3>
             {currentClientCards.length > 0 ? (
-              <table className="cards-table">
-                <thead>
-                  <tr>
-                    <th>Número de Tarjeta</th>
-                    <th>Saldo</th>
-                    <th>Activa</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentClientCards.map((card) => (
-                    <tr key={card._id}>
-                      <td>{card.card_number}</td>
-                      <td>{card.balance}</td>
-                      <td>{card.is_active ? 'Sí' : 'No'}</td>
-                      <td>
-                        <button onClick={() => handleAddSubtractBalanceClick(card)}>Añadir/Restar Saldo</button>
-                        <button onClick={() => handleDeleteCard(card._id)}>Eliminar</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+             <table className="cards-table">
+             <thead>
+               <tr>
+                 <th>Número de Tarjeta</th>
+                 <th>Saldo</th>
+                 <th>UID NFC</th>
+                 <th>NFC Activo</th>
+                 <th>Activa</th>
+                 <th>Acciones</th>
+               </tr>
+             </thead>
+             <tbody>
+               {currentClientCards.map((card) => (
+                 <tr key={card._id}>
+                   <td>{card.card_number}</td>
+                   <td>${card.balance}</td>
+                   <td>{card.nfc_uid || 'No vinculado'}</td>
+                   <td>{card.is_nfc_enabled ? '🟢 Sí' : '🔴 No'}</td>
+                   <td>{card.is_active ? 'Sí' : 'No'}</td>
+                   <td>
+                     <button onClick={() => handleAddSubtractBalanceClick(card)}>Añadir/Restar</button>
+                     {!card.nfc_uid ? (
+                       <button onClick={() => handleLinkNFCClick(card)} className="nfc-link-btn">
+                         🔗 Vincular NFC
+                       </button>
+                     ) : (
+                       <button onClick={() => handleReloadNFCClick(card)} className="nfc-reload-btn">
+                         💳 Recargar NFC
+                       </button>
+                     )}
+                     <button onClick={() => handleDeleteCard(card._id)}>Eliminar</button>
+                   </td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
             ) : (
               <p>Este cliente no tiene tarjetas.</p>
             )}
@@ -452,6 +598,123 @@ const ClientsPage = () => {
         <span>Página {currentPage} de {totalPages} ({totalClients} clientes)</span>
         <button onClick={handleNextPage} disabled={currentPage === totalPages}>Siguiente</button>
       </div>
+
+      {/* ========== MODAL NFC ========== */}
+{showNFCModal && (
+  <div className="nfc-modal">
+    <div className="nfc-modal-content">
+      <div className="modal-header">
+        <h2>
+          {nfcOperation === 'linking' ? '🔗 Vincular Tarjeta NFC' : 
+           nfcOperation === 'reloading' ? '💳 Recargar Tarjeta NFC' : 
+           '🔍 Consultar Saldo NFC'}
+        </h2>
+        <button onClick={() => setShowNFCModal(false)} className="close-button">×</button>
+      </div>
+      
+      <div className="nfc-status-section">
+        <div className={`nfc-reader-status ${nfcReaderStatus.connected ? 'connected' : 'disconnected'}`}>
+          Lector NFC: {nfcReaderStatus.connected ? '🟢 Conectado' : '🔴 Desconectado'}
+        </div>
+        
+        {selectedCardForNFC && (
+          <div className="card-info">
+            <p><strong>Tarjeta:</strong> {selectedCardForNFC.card_number}</p>
+            <p><strong>Saldo Actual:</strong> ${selectedCardForNFC.balance}</p>
+            {selectedCardForNFC.nfc_uid && <p><strong>UID Actual:</strong> {selectedCardForNFC.nfc_uid}</p>}
+          </div>
+        )}
+
+        {nfcOperation === 'querying' && queryResult && (
+          <div className="query-result-info">
+            <h3>📋 Información de la Tarjeta:</h3>
+            <div className="card-info">
+              <p><strong>Número de Tarjeta:</strong> {queryResult.card_number}</p>
+              <p><strong>Saldo:</strong> ${queryResult.balance}</p>
+              <p><strong>UID NFC:</strong> {queryResult.nfc_uid}</p>
+              <p><strong>Propietario:</strong> {queryResult.client_info.name}</p>
+              <p><strong>Email:</strong> {queryResult.client_info.email}</p>
+              <p><strong>Teléfono:</strong> {queryResult.client_info.telefono}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {nfcOperation === 'reloading' && nfcStatus === 'idle' && (
+        <div className="reload-amount-section">
+          <label><strong>💰 Monto a Recargar:</strong></label>
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            max="1000"
+            placeholder="0.00"
+            value={reloadAmount}
+            onChange={(e) => setReloadAmount(e.target.value)}
+          />
+        </div>
+      )}
+
+      <div className={`nfc-operation-status ${nfcStatus}`}>
+        {nfcStatus === 'idle' && (
+          <button 
+            onClick={handleNFCOperation}
+            disabled={!nfcReaderStatus.connected}
+            className="nfc-action-button"
+          >
+            {nfcOperation === 'linking' ? '🔗 Acercar Tarjeta para Vincular' : 
+             nfcOperation === 'reloading' ? '💳 Acercar Tarjeta para Recargar' :
+             '🔍 Acercar Tarjeta para Consultar Saldo'}
+          </button>
+        )}
+        
+        {nfcStatus === 'waiting' && (
+          <div className="nfc-waiting">
+            <div className="spinner"></div>
+            <p>🔄 Acerque su tarjeta al lector NFC...</p>
+          </div>
+        )}
+        
+        {nfcStatus === 'reading' && (
+          <div className="nfc-reading">
+            <div className="spinner"></div>
+            <p>📖 Procesando tarjeta...</p>
+          </div>
+        )}
+        
+        {nfcStatus === 'success' && (
+          <div className="nfc-success">
+            <p>✅ {nfcOperation === 'linking' ? 'Tarjeta vinculada' : 
+                    nfcOperation === 'reloading' ? 'Recarga' : 
+                    'Consulta'} exitosa</p>
+          </div>
+        )}
+        
+        {nfcStatus === 'error' && (
+          <div className="nfc-error">
+            <p>❌ Error en operación NFC</p>
+            <button onClick={() => setNfcStatus('idle')}>🔄 Reintentar</button>
+          </div>
+        )}
+      </div>
+
+      {nfcLogs.length > 0 && (
+        <div className="nfc-logs">
+          <h4>📋 Registro de Operación:</h4>
+          <div className="logs-container">
+            {nfcLogs.map((log, index) => (
+              <div key={index} className="log-entry">{log}</div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      <button onClick={() => setShowNFCModal(false)} className="close-button-bottom">
+        Cerrar
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };
