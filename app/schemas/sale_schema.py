@@ -52,6 +52,7 @@ class ServiceItemSchema(Schema):
         allow_none=True,
         missing=None
     )
+    weight_kg = fields.Float(allow_none=True, missing=None) # Añadir weight_kg aquí
     status = fields.Str(
         validate=validate.OneOf(['pending', 'active', 'completed']),
         missing='pending'
@@ -172,6 +173,7 @@ class SaleSchema(Schema):
                     'machine_type': item.get('machine_type'),
                     'duration': item.get('duration'),
                     'price': item.get('price'),
+                    'weight_kg': item.get('weight_kg'), # Añadir weight_kg aquí
                     'status': item.get('status', 'pending'),
                     'started_at': item.get('started_at'),
                     'estimated_end_at': item.get('estimated_end_at')

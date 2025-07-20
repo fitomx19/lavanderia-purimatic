@@ -25,6 +25,7 @@ def create_sale(current_user):
             return error_response('Datos JSON requeridos', 400)
         
         data = request.get_json()
+        logger.info(f"Datos recibidos: {data}")
         
         # Agregar ID del empleado actual si no está presente
         if 'employee_id' not in data:
@@ -59,6 +60,7 @@ def get_sales(current_user):
     GET /api/sales
     """
     try:
+
         # Obtener parámetros de consulta
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)

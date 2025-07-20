@@ -102,21 +102,22 @@ class ServiceCycleRepository(BaseRepository):
     
     def get_cycle_price(self, cycle_id: str) -> Optional[float]:
         """
-        Obtener precio de un ciclo
+        Obtener precio de un ciclo (para servicios de precio fijo)
         
         Args:
             cycle_id: ID del ciclo
             
         Returns:
-            float: Precio del ciclo o None si no existe
+            float: Precio del ciclo o None si no existe o si es un servicio por kg
         """
         cycle = self.find_by_id(cycle_id)
         if cycle:
-            # Para servicios normales (lavado, secado)
-            if cycle.get('price'):
-                return float(cycle.get('price', 0))
-            # Para encargo_lavado, devuelve None ya que el precio depende del peso
-            return None
+            # Si el servicio es de tipo 'encargo_lavado', esta función no devuelve un precio fijo
+            if cycle.get('service_type') == 'encargo_lavado':
+                return None
+            
+            # Para otros tipos de servicio, devuelve el precio fijo
+            return float(cycle.get('price', 0))
         return None
     
     def get_cycle_price_per_kg(self, cycle_id: str) -> Optional[float]:

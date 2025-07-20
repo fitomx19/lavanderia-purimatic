@@ -68,7 +68,13 @@ const SalesPage = () => {
     currentServices.forEach(item => {
       const serviceCycle = serviceCycles.find(s => s._id === item.service_cycle_id);
       if (serviceCycle) {
-        total += parseFloat(serviceCycle.price);
+        if (serviceCycle.service_type === 'encargo_lavado') {
+          // Si es encargo_lavado, usa price_per_kg y la cantidad de kg
+          total += parseFloat(serviceCycle.price_per_kg || 0) * (item.weight_kg || 0);
+        } else {
+          // Para otros servicios, usa el precio fijo
+          total += parseFloat(serviceCycle.price || 0);
+        }
       }
     });
     return total;
@@ -276,23 +282,51 @@ const SalesPage = () => {
   const handleCreateSale = async (e) => {
     e.preventDefault();
     try {
+      // Validaciones antes de crear la venta
+      if (newSale.items.products.length === 0 && newSale.items.services.length === 0) {
+        toast.error('Debes añadir al menos un producto o un servicio para crear la venta.');
+        return;
+      }
+      if (newSale.payment_methods.length === 0) {
+        toast.error('Debes añadir al menos un método de pago.');
+        return;
+      }
+      // Validar que el monto de los pagos no sea 0 si hay métodos de pago
+      const totalPaymentsAmount = newSale.payment_methods.reduce((sum, pm) => sum + pm.amount, 0);
+      if (totalPaymentsAmount <= 0) {
+        toast.error('El monto total de los pagos debe ser mayor a cero.');
+        return;
+      }
+
       const itemsToSend = [
-        ...newSale.items.products,
-        ...newSale.items.services.flatMap(svc => {
-          if (svc.service_type === 'mixto') {
-            return [
-              { service_cycle_id: svc.service_cycle_id, machine_id: svc.washer_id },
-              { service_cycle_id: svc.service_cycle_id, machine_id: svc.dryer_id }
-            ];
+        ...newSale.items.products.map(product => ({
+          product_id: product.product_id,
+          quantity: product.quantity
+        })),
+        ...newSale.items.services.map(svc => {
+          const serviceData = { service_cycle_id: svc.service_cycle_id };
+          const selectedCycle = serviceCycles.find(cycle => cycle._id === svc.service_cycle_id);
+
+          if (svc.service_type === 'encargo_lavado') {
+            serviceData.weight_kg = svc.weight_kg;
+            serviceData.machine_id = svc.machine_id; // Incluir machine_id para encargo_lavado
+            serviceData.price = parseFloat(selectedCycle.price_per_kg || 0) * (svc.weight_kg || 0); // Precio calculado por kg
           } else {
-            return [{ service_cycle_id: svc.service_cycle_id, machine_id: svc.machine_id }];
+            serviceData.machine_id = svc.machine_id;
+            serviceData.price = parseFloat(selectedCycle.price || 0); // Precio fijo
           }
+          return serviceData;
         })
       ];
 
       const saleDataToSend = {
         ...newSale,
-        items: itemsToSend
+        items: itemsToSend,
+        payment_methods: newSale.payment_methods.map(pm => ({
+          payment_type: pm.payment_type,
+          amount: pm.amount,
+          ...(pm.card_id && { card_id: pm.card_id }) // Incluir card_id solo si existe
+        }))
       };
 
       const response = await createSale(saleDataToSend);
@@ -338,6 +372,21 @@ const SalesPage = () => {
     }));
   };
 
+  const handleRemoveProductItem = (indexToRemove) => {
+    setNewSale(prev => {
+      const updatedProducts = prev.items.products.filter((_, index) => index !== indexToRemove);
+      const newTotal = calculateTotal(updatedProducts, prev.items.services);
+      setTotalAmount(newTotal);
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          products: updatedProducts
+        }
+      };
+    });
+  };
+
   const handleProductItemChange = (index, field, value) => {
     setNewSale(prev => {
       const updatedProducts = prev.items.products.map((item, i) =>
@@ -360,9 +409,24 @@ const SalesPage = () => {
       ...prev,
       items: {
         ...prev.items,
-        services: [...prev.items.services, { service_cycle_id: '', machine_id: '', service_type: '', washer_id: '', dryer_id: '' }]
+        services: [...prev.items.services, { service_cycle_id: '', machine_id: '', service_type: '', washer_id: '', dryer_id: '', weight_kg: '' }]
       }
     }));
+  };
+
+  const handleRemoveServiceItem = (indexToRemove) => {
+    setNewSale(prev => {
+      const updatedServices = prev.items.services.filter((_, index) => index !== indexToRemove);
+      const newTotal = calculateTotal(prev.items.products, updatedServices);
+      setTotalAmount(newTotal);
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          services: updatedServices
+        }
+      };
+    });
   };
 
   const handleServiceItemChange = (index, field, value) => {
@@ -375,9 +439,14 @@ const SalesPage = () => {
         const selectedCycle = serviceCycles.find(cycle => cycle._id === value);
         if (selectedCycle) {
           updatedServices[index].service_type = selectedCycle.service_type;
+          // Limpiar campos de máquina si el tipo de servicio cambia
           updatedServices[index].machine_id = '';
           updatedServices[index].washer_id = '';
           updatedServices[index].dryer_id = '';
+          // Limpiar weight_kg si no es encargo_lavado
+          if (selectedCycle.service_type !== 'encargo_lavado') {
+            updatedServices[index].weight_kg = '';
+          }
         }
       }
 
@@ -407,6 +476,13 @@ const SalesPage = () => {
     setNewSale(prev => ({
       ...prev,
       payment_methods: updatedPayments
+    }));
+  };
+
+  const handleRemovePaymentMethod = (indexToRemove) => {
+    setNewSale(prev => ({
+      ...prev,
+      payment_methods: prev.payment_methods.filter((_, index) => index !== indexToRemove)
     }));
   };
 
@@ -595,6 +671,9 @@ const SalesPage = () => {
                         min="1"
                         required
                       />
+                      <button type="button" onClick={() => handleRemoveProductItem(index)} className="remove-btn">
+                        <span>−</span>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -610,7 +689,10 @@ const SalesPage = () => {
                 </div>
                 
                 <div className="items-container">
-                  {newSale.items.services.map((item, index) => (
+                  {newSale.items.services.map((item, index) => {
+                    const selectedServiceCycle = serviceCycles.find(cycle => cycle._id === item.service_cycle_id);
+
+                    return (
                     <div key={index} className="service-item">
                       <select
                         value={item.service_cycle_id}
@@ -621,55 +703,25 @@ const SalesPage = () => {
                         <option value="">Selecciona un ciclo de servicio</option>
                         {serviceCycles.map(cycle => (
                           <option key={cycle._id} value={cycle._id}>
-                            {cycle.name} ({cycle.duration_minutes} min) - ${cycle.price}
+                              {cycle.name} ({cycle.duration_minutes} min) - {cycle.service_type === 'encargo_lavado' ? `$${cycle.price_per_kg}/kg` : `$${cycle.price}`}
                           </option>
                         ))}
                       </select>
 
-                      {item.service_type === 'mixto' ? (
-                        <div className="machine-selection">
-                          <select
-                            value={item.washer_id}
-                            onChange={(e) => handleServiceItemChange(index, 'washer_id', e.target.value)}
-                            className="modern-select"
+                        {selectedServiceCycle && selectedServiceCycle.service_type === 'encargo_lavado' && (
+                          <input
+                            type="number"
+                            placeholder="Peso en Kg"
+                            value={item.weight_kg}
+                            onChange={(e) => handleServiceItemChange(index, 'weight_kg', parseFloat(e.target.value))}
+                            className="modern-input"
+                            min="0.01"
+                            step="0.01"
                             required
-                          >
-                            <option value="">Lavadora</option>
-                            {machines
-                              .filter(machine => machine.tipo === 'lavadora')
-                              .map(machine => (
-                                <option
-                                  key={machine._id}
-                                  value={machine._id}
-                                  disabled={machine.estado !== 'disponible'}
-                                  className={machine.estado !== 'disponible' ? 'unavailable' : ''}
-                                >
-                                  Lavadora {machine.numero} ({machine.estado})
-                                </option>
-                              ))}
-                          </select>
-                          <select
-                            value={item.dryer_id}
-                            onChange={(e) => handleServiceItemChange(index, 'dryer_id', e.target.value)}
-                            className="modern-select"
-                            required
-                          >
-                            <option value="">Secadora</option>
-                            {machines
-                              .filter(machine => machine.tipo === 'secadora')
-                              .map(machine => (
-                                <option
-                                  key={machine._id}
-                                  value={machine._id}
-                                  disabled={machine.estado !== 'disponible'}
-                                  className={machine.estado !== 'disponible' ? 'unavailable' : ''}
-                                >
-                                  Secadora {machine.numero} ({machine.estado})
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                      ) : (
+                          />
+                        )}
+
+                        {selectedServiceCycle && (
                         <select
                           value={item.machine_id}
                           onChange={(e) => handleServiceItemChange(index, 'machine_id', e.target.value)}
@@ -677,20 +729,29 @@ const SalesPage = () => {
                           required
                         >
                           <option value="">Selecciona una máquina</option>
-                          {machines.map(machine => (
+                            {machines
+                              .filter(machine => {
+                                const allowedMachineIds = selectedServiceCycle.allowed_machines.map(am => am._id);
+                                return allowedMachineIds.includes(machine._id);
+                              })
+                              .map(machine => (
                             <option
                               key={machine._id}
                               value={machine._id}
                               disabled={machine.estado !== 'disponible'}
                               className={machine.estado !== 'disponible' ? 'unavailable' : ''}
                             >
-                              {machine.numero} ({machine.marca} - {machine.tipo}) ({machine.estado})
+                                  {machine.numero} ({machine.marca} - {machine.tipo}) ({getStatusText(machine.estado)})
                             </option>
                           ))}
                         </select>
                       )}
+                        <button type="button" onClick={() => handleRemoveServiceItem(index)} className="remove-btn">
+                          <span>−</span>
+                        </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -735,6 +796,9 @@ const SalesPage = () => {
                           required
                         />
                       )}
+                      <button type="button" onClick={() => handleRemovePaymentMethod(index)} className="remove-btn">
+                        <span>−</span>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -897,7 +961,13 @@ const SalesPage = () => {
                             return (
                               <div key={svc.service_cycle_id} className={`service-item ${statusClass}`}>
                                 <span className="service-name">{serviceDisplay}</span>
+                                {serviceCycle?.service_type === 'encargo_lavado' ? (
+                                  <span className="service-price">
+                                    ${(serviceCycle.price_per_kg * svc.weight_kg).toFixed(2)} ({svc.weight_kg} kg)
+                                  </span>
+                                ) : (
                                 <span className="service-price">${svc.price?.toFixed(2) || 'N/A'}</span>
+                                )}
                                 {machine && (
                                   <span className="machine-info">
                                     Máquina: {machine.numero}
@@ -930,7 +1000,7 @@ const SalesPage = () => {
                               }} 
                               className="action-btn complete"
                             >
-                              ✅ Completar
+                              ✅ Iniciar 
                             </button>
                           )}
                           {sale.status === 'completed' && sale.allServicesCompleted && sale.items.services.length > 0 && (
@@ -1004,7 +1074,13 @@ const SalesPage = () => {
                               return (
                                 <div key={svc.service_cycle_id} className="service-item completed">
                                   <span className="service-name">{serviceCycle?.name || 'N/A'}</span>
+                                  {serviceCycle?.service_type === 'encargo_lavado' ? (
+                                    <span className="service-price">
+                                      ${(serviceCycle.price_per_kg * svc.weight_kg).toFixed(2)} ({svc.weight_kg} kg)
+                                    </span>
+                                  ) : (
                                   <span className="service-price">${svc.price?.toFixed(2) || 'N/A'}</span>
+                                  )}
                                 </div>
                               );
                             })}

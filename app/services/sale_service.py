@@ -165,6 +165,8 @@ class SaleService:
         Returns:
             Dict: Datos enriquecidos o error
         """
+
+        logger.info(f"Datos sin enriquecer: {sale_data}")
         try:
             items = sale_data.get('items', {})
             products = items.get('products', [])
@@ -231,7 +233,7 @@ class SaleService:
                 machine_type = machine.get('tipo', '')
                 validation = self.service_cycle_repository.validate_cycle_for_machine(
                     service_item['service_cycle_id'], 
-                    service_item['machine_id'], # Añadido machine_id aquí
+                    service_item['machine_id'],
                     machine_type
                 )
                 if not validation['valid']:
@@ -240,8 +242,28 @@ class SaleService:
                         'message': validation['message']
                     }
                 
-                # Calcular precio y duración
-                price = float(cycle.get('price', 0)) # Cambiado de 'precio' a 'price'
+                # Calcular precio y duración basado en el tipo de servicio
+                price = 0.0
+                if cycle.get('service_type') == 'encargo_lavado':
+                    # Intentar convertir weight_kg a float primero
+                    try:
+                        weight_kg_val = float(service_item.get('weight_kg', 0)) # Usar .get para evitar KeyError
+                    except (ValueError, TypeError):
+                        return {
+                            'success': False,
+                            'message': 'Peso en kilogramos inválido para encargo_lavado. Debe ser un número.'
+                        }
+
+                    if weight_kg_val <= 0:
+                        return {
+                            'success': False,
+                            'message': 'Peso en kilogramos debe ser un número positivo para encargo_lavado.'
+                        }
+                    price = float(service_item['price']) # Usar el precio calculado enviado desde el frontend
+                    service_item['weight_kg'] = weight_kg_val # Actualizar el ítem con el valor flotante
+                else:
+                    price = float(cycle.get('price', 0)) # Usar el precio fijo del ciclo de servicio
+
                 duration = cycle.get('duration_minutes', 30)
                 
                 # Actualizar item con datos calculados

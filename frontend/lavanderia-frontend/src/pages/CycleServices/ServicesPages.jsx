@@ -384,10 +384,10 @@ const ServicesPages = () => {
                         <input type="number" id="price-per-kg" name="price_per_kg" value={formData.price_per_kg} onChange={handleInputChange} step="0.01" required />
                       </div>
                     ) : (
-                      <div className="form-group">
-                        <label htmlFor="price">Precio:</label>
-                        <input type="number" id="price" name="price" value={formData.price} onChange={handleInputChange} step="0.01" required />
-                      </div>
+                    <div className="form-group">
+                      <label htmlFor="price">Precio:</label>
+                      <input type="number" id="price" name="price" value={formData.price} onChange={handleInputChange} step="0.01" required />
+                    </div>
                     )}
 
                     <div className="form-group">
