@@ -4,6 +4,10 @@ from pymongo import IndexModel, ASCENDING
 from bson import ObjectId
 import random
 import string
+import logging
+
+# Configurar logger
+logger = logging.getLogger(__name__)
 
 class CardRepository(BaseRepository):
     """
@@ -241,3 +245,160 @@ class CardRepository(BaseRepository):
         if exclude_id:
             filter_criteria['_id'] = {'$ne': ObjectId(exclude_id)}
         return self.find_one(filter_criteria) is not None
+
+    def validate_nfc_payment(self, nfc_uid: str, amount: float) -> Dict[str, Any]:
+        """
+        Validar pago NFC con UID físico
+        
+        Args:
+            nfc_uid: UID físico de la tarjeta NFC
+            amount: Monto a validar
+            
+        Returns:
+            Dict: Resultado de la validación con info del cliente
+        """
+        logger.info(f"🔍 [card_repository] Iniciando validate_nfc_payment")
+        logger.info(f"🔍 [card_repository] Parámetros: nfc_uid={nfc_uid}, amount={amount}")
+        
+        try:
+            # Buscar tarjeta por UID NFC
+            logger.info(f"🔍 [card_repository] Buscando tarjeta con UID NFC: {nfc_uid}")
+            card = self.find_by_nfc_uid(nfc_uid)
+            
+            if not card:
+                logger.warning(f"⚠️ [card_repository] Tarjeta NFC no encontrada: {nfc_uid}")
+                return {
+                    'valid': False,
+                    'message': 'Tarjeta NFC no registrada en el sistema'
+                }
+            
+            logger.info(f"✅ [card_repository] Tarjeta encontrada: {card.get('card_number')}")
+            
+            if not card.get('is_active', False):
+                logger.warning(f"⚠️ [card_repository] Tarjeta inactiva: {card.get('card_number')}")
+                return {
+                    'valid': False,
+                    'message': 'Tarjeta inactiva'
+                }
+            
+            balance = float(card.get('balance', 0))
+            logger.info(f"💰 [card_repository] Saldo actual: ${balance:.2f}, Monto requerido: ${amount:.2f}")
+            
+            if balance < amount:
+                logger.warning(f"⚠️ [card_repository] Saldo insuficiente: ${balance:.2f} < ${amount:.2f}")
+                return {
+                    'valid': False,
+                    'message': f'Saldo insuficiente. Disponible: ${balance:.2f}',
+                    'card_data': {
+                        'card_id': str(card['_id']),
+                        'card_number': card.get('card_number'),
+                        'current_balance': balance,
+                        'client_id': card.get('client_id'),
+                        'nfc_uid': nfc_uid
+                    }
+                }
+            
+            # Obtener datos del cliente
+            logger.info(f"🔍 [card_repository] Obteniendo datos del cliente: {card.get('client_id')}")
+            from app.repositories.user_client_repository import UserClientRepository
+            client_repo = UserClientRepository()
+            client_id = card.get('client_id')
+            client = client_repo.find_by_id(client_id) if client_id else None
+            
+            client_name = client.get('nombre', 'Cliente Desconocido') if client else 'Cliente Desconocido'
+            logger.info(f"👤 [card_repository] Cliente: {client_name}")
+            
+            remaining_balance = balance - amount
+            logger.info(f"✅ [card_repository] Validación exitosa. Saldo restante: ${remaining_balance:.2f}")
+            
+            return {
+                'valid': True,
+                'message': f'Tarjeta válida para pago de ${amount:.2f}',
+                'card_data': {
+                    'card_id': str(card['_id']),
+                    'card_number': card.get('card_number'),
+                    'current_balance': balance,
+                    'client_id': card.get('client_id'),
+                    'client_name': client_name,
+                    'nfc_uid': nfc_uid,
+                    'remaining_balance': remaining_balance
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ [card_repository] Error validando pago NFC: {e}")
+            return {
+                'valid': False,
+                'message': 'Error interno al validar tarjeta'
+            }
+
+    def process_nfc_payment(self, nfc_uid: str, amount: float) -> Dict[str, Any]:
+        """
+        Procesar pago NFC descontando saldo
+        
+        Args:
+            nfc_uid: UID físico de la tarjeta NFC
+            amount: Monto a descontar
+            
+        Returns:
+            Dict: Resultado del procesamiento
+        """
+        logger.info(f"🔍 [card_repository] Iniciando process_nfc_payment")
+        logger.info(f"🔍 [card_repository] Parámetros: nfc_uid={nfc_uid}, amount={amount}")
+        
+        try:
+            # Buscar tarjeta por UID NFC
+            logger.info(f"🔍 [card_repository] Buscando tarjeta con UID NFC: {nfc_uid}")
+            card = self.find_by_nfc_uid(nfc_uid)
+            
+            if not card:
+                logger.warning(f"⚠️ [card_repository] Tarjeta NFC no encontrada: {nfc_uid}")
+                return {
+                    'success': False,
+                    'message': 'Tarjeta NFC no encontrada'
+                }
+            
+            logger.info(f"✅ [card_repository] Tarjeta encontrada: {card.get('card_number')}")
+            
+            # Validar nuevamente antes de procesar
+            logger.info(f"🔍 [card_repository] Validando pago antes de procesar")
+            validation = self.validate_nfc_payment(nfc_uid, amount)
+            if not validation['valid']:
+                logger.warning(f"⚠️ [card_repository] Validación fallida: {validation['message']}")
+                return {
+                    'success': False,
+                    'message': validation['message']
+                }
+            
+            logger.info(f"✅ [card_repository] Validación exitosa, procediendo a descontar saldo")
+            
+            # Descontar saldo
+            card_id = str(card['_id'])
+            logger.info(f"💰 [card_repository] Descontando ${amount:.2f} de la tarjeta {card_id}")
+            updated_card = self.update_balance(card_id, amount, 'subtract')
+            
+            if updated_card:
+                logger.info(f"✅ [card_repository] Pago procesado exitosamente. Nuevo saldo: ${updated_card['balance']:.2f}")
+                return {
+                    'success': True,
+                    'message': f'Pago procesado exitosamente. Nuevo saldo: ${updated_card["balance"]:.2f}',
+                    'card_data': {
+                        'card_id': str(updated_card['_id']),
+                        'new_balance': updated_card['balance'],
+                        'amount_charged': amount,
+                        'nfc_uid': nfc_uid
+                    }
+                }
+            else:
+                logger.error(f"❌ [card_repository] Error al actualizar saldo de la tarjeta")
+                return {
+                    'success': False,
+                    'message': 'Error al procesar el pago'
+                }
+                
+        except Exception as e:
+            logger.error(f"❌ [card_repository] Error procesando pago NFC: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno al procesar pago'
+            }

@@ -1,0 +1,511 @@
+/* CREAR NUEVO ARCHIVO: src/components/NFCPaymentModal.css */
+
+.nfc-payment-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+  
+  .nfc-payment-modal {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    color: white;
+    font-family: 'Arial', sans-serif;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 30px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  
+  .close-button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .close-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  
+  .modal-body {
+    padding: 25px 30px;
+  }
+  
+  .payment-info {
+    text-align: center;
+    margin-bottom: 25px;
+  }
+  
+  .amount-display {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .amount-label {
+    display: block;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 5px;
+  }
+  
+  .amount-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #fff;
+  }
+  
+  .nfc-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border: 1px solid;
+  }
+  
+  .nfc-status.checking {
+    background: rgba(255, 193, 7, 0.2);
+    border-color: rgba(255, 193, 7, 0.4);
+  }
+  
+  .nfc-status.available {
+    background: rgba(40, 167, 69, 0.2);
+    border-color: rgba(40, 167, 69, 0.4);
+  }
+  
+  .nfc-status.unavailable {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: rgba(220, 53, 69, 0.4);
+  }
+  
+  .status-indicator .icon {
+    font-size: 1.2rem;
+  }
+  
+  .status-indicator .spinner {
+    font-size: 1.2rem;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  .payment-area {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  /* Estados específicos */
+  .idle-state .nfc-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+  
+  .start-payment-btn {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .start-payment-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Animación de espera */
+  .waiting-state {
+    text-align: center;
+  }
+  
+  .nfc-animation {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 25px;
+  }
+  
+  .nfc-waves {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  
+  .wave {
+    position: absolute;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    animation: nfc-pulse 2s ease-out infinite;
+  }
+  
+  .wave:nth-child(1) {
+    width: 40px;
+    height: 40px;
+    margin-left: -20px;
+    margin-top: -20px;
+    animation-delay: 0s;
+  }
+  
+  .wave:nth-child(2) {
+    width: 80px;
+    height: 80px;
+    margin-left: -40px;
+    margin-top: -40px;
+    animation-delay: 0.5s;
+  }
+  
+  .wave:nth-child(3) {
+    width: 120px;
+    height: 120px;
+    margin-left: -60px;
+    margin-top: -60px;
+    animation-delay: 1s;
+  }
+  
+  @keyframes nfc-pulse {
+    0% {
+      opacity: 1;
+      transform: scale(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+  
+  .nfc-icon-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 20px;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    width: 0%;
+    animation: progress-loading 30s linear forwards;
+  }
+  
+  @keyframes progress-loading {
+    to { width: 100%; }
+  }
+  
+  /* Estado confirmado */
+  .confirmed-state {
+    width: 100%;
+  }
+  
+  .success-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+  }
+  
+  .card-info {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: left;
+  }
+  
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .info-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  
+  .label {
+    opacity: 0.8;
+    font-weight: 500;
+  }
+  
+  .value {
+    font-weight: 600;
+  }
+  
+  .value.balance {
+    color: #4CAF50;
+  }
+  
+  .value.remaining {
+    color: #FFC107;
+  }
+  
+  .confirm-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+  }
+  
+  .confirm-btn {
+    flex: 2;
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .retry-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .confirm-btn:hover,
+  .retry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Estado de procesamiento */
+  .processing-state .processing-spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+  }
+  
+  .processing-spinner .spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Estado de éxito */
+  .success-state .success-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+  }
+  
+  .auto-close {
+    margin-top: 15px;
+    opacity: 0.7;
+    font-style: italic;
+  }
+  
+  /* Estado de error */
+  .error-state .error-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+  }
+  
+  .error-message {
+    background: rgba(220, 53, 69, 0.2);
+    border: 1px solid rgba(220, 53, 69, 0.4);
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+  }
+  
+  .error-card-info {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    text-align: left;
+  }
+  
+  .error-card-info h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+  }
+  
+  .error-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  .cancel-btn {
+    background: rgba(220, 53, 69, 0.8);
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .cancel-btn:hover {
+    background: rgba(220, 53, 69, 1);
+    transform: translateY(-2px);
+  }
+  
+  /* Estado no disponible */
+  .unavailable-state .error-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+  }
+  
+  .unavailable-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  /* Logs */
+  .logs-section {
+    margin-top: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 20px;
+  }
+  
+  .logs-section details summary {
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+  
+  .logs-container {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  
+  .log-entry {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+  }
+  
+  .log-time {
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  
+  .log-message {
+    flex: 1;
+  }
+  
+  /* Footer */
+  .modal-footer {
+    padding: 20px 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+  }
+  
+  .footer-cancel-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .footer-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  /* Responsive */
+  @media (max-width: 600px) {
+    .nfc-payment-modal {
+      width: 95%;
+      margin: 20px;
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+      padding: 20px;
+    }
+    
+    .confirm-buttons,
+    .error-buttons,
+    .unavailable-buttons {
+      flex-direction: column;
+    }
+    
+    .amount-value {
+      font-size: 1.5rem;
+    }
+  }

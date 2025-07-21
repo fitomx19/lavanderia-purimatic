@@ -97,3 +97,87 @@ export const deactivateMachines = async () => {
     throw error.response ? error.response.data : new Error('Error de conexión al reactivar máquinas');
   }
 };
+
+
+// AGREGAR AL FINAL DE src/services/salesService.js
+
+// Obtener estado del lector NFC para ventas
+export const getNFCStatusForSales = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_BASE_URL}/api/nfc/status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al obtener estado NFC');
+  }
+};
+
+// Validar pago con tarjeta NFC
+export const validateNFCPayment = async (amount, timeout = 30) => {
+  console.log('🔍 [salesService] Iniciando validateNFCPayment');
+  console.log('🔍 [salesService] Parámetros recibidos:', { amount, timeout });
+  
+  try {
+    const token = getToken();
+    console.log('🔍 [salesService] Token obtenido:', token ? 'SÍ' : 'NO');
+    console.log('🔍 [salesService] URL de la API:', `${API_BASE_URL}/api/nfc/validate-payment`);
+    
+    const requestData = {
+      amount: amount,
+      timeout: timeout
+    };
+    console.log('🔍 [salesService] Datos de la petición:', requestData);
+    
+    const response = await axios.post(`${API_BASE_URL}/api/nfc/validate-payment`, requestData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('🔍 [salesService] Respuesta del servidor:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ [salesService] Error en validateNFCPayment:', error);
+    console.error('❌ [salesService] Error response:', error.response?.data);
+    console.error('❌ [salesService] Error status:', error.response?.status);
+    throw error.response ? error.response.data : new Error('Error de conexión al validar pago NFC');
+  }
+};
+
+// Procesar pago con tarjeta NFC
+export const processNFCPayment = async (nfcUid, amount) => {
+  console.log('🔍 [salesService] Iniciando processNFCPayment');
+  console.log('🔍 [salesService] Parámetros recibidos:', { nfcUid, amount });
+  
+  try {
+    const token = getToken();
+    console.log('🔍 [salesService] Token obtenido:', token ? 'SÍ' : 'NO');
+    console.log('🔍 [salesService] URL de la API:', `${API_BASE_URL}/api/nfc/process-payment`);
+    
+    const requestData = {
+      nfc_uid: nfcUid,
+      amount: amount
+    };
+    console.log('🔍 [salesService] Datos de la petición:', requestData);
+    
+    const response = await axios.post(`${API_BASE_URL}/api/nfc/process-payment`, requestData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('🔍 [salesService] Respuesta del servidor:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ [salesService] Error en processNFCPayment:', error);
+    console.error('❌ [salesService] Error response:', error.response?.data);
+    console.error('❌ [salesService] Error status:', error.response?.status);
+    throw error.response ? error.response.data : new Error('Error de conexión al procesar pago NFC');
+  }
+};

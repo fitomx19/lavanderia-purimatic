@@ -125,3 +125,58 @@ card_balance_schema = CardBalanceSchema()
 card_transfer_schema = CardTransferSchema()
 card_response_schema = CardResponseSchema()
 cards_response_schema = CardResponseSchema(many=True) 
+
+# --- AGREGADO: Esquemas para pagos NFC ---
+
+class NFCPaymentValidationSchema(Schema):
+    """
+    Schema para validación de pago NFC
+    """
+    
+    amount = fields.Decimal(
+        required=True,
+        places=2,
+        validate=validate.Range(min=0.01, max=1000),
+        error_messages={'required': 'El monto es requerido'}
+    )
+    timeout = fields.Integer(
+        missing=30,
+        validate=validate.Range(min=5, max=120)
+    )
+
+class NFCPaymentProcessSchema(Schema):
+    """
+    Schema para procesamiento de pago NFC
+    """
+    
+    nfc_uid = fields.Str(
+        required=True,
+        validate=validate.Length(min=4, max=20),
+        error_messages={'required': 'El UID NFC es requerido'}
+    )
+    amount = fields.Decimal(
+        required=True,
+        places=2,
+        validate=validate.Range(min=0.01, max=1000),
+        error_messages={'required': 'El monto es requerido'}
+    )
+
+class NFCPaymentResponseSchema(Schema):
+    """
+    Schema para respuesta de pago NFC
+    """
+    
+    card_id = fields.Str()
+    card_number = fields.Str()
+    client_id = fields.Str()
+    client_name = fields.Str()
+    current_balance = fields.Decimal(places=2)
+    remaining_balance = fields.Decimal(places=2)
+    amount_charged = fields.Decimal(places=2)
+    nfc_uid = fields.Str()
+    new_balance = fields.Decimal(places=2)
+
+# Instancias de esquemas para pagos NFC
+nfc_payment_validation_schema = NFCPaymentValidationSchema()
+nfc_payment_process_schema = NFCPaymentProcessSchema()
+nfc_payment_response_schema = NFCPaymentResponseSchema() 

@@ -4,6 +4,7 @@ import { createSale, getSales, completeSale, deactivateMachines, finalizeSale } 
 import { getProducts } from '../../services/productoService';
 import { getAllActiveWashers, getAllActiveDryers } from '../../services/machineService';
 import { getServiceCycles } from '../../services/cycleService';
+import NFCPaymentModal from '../../components/NFCPaymentModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './SalesPages.css';
@@ -34,6 +35,9 @@ const SalesPage = () => {
   const [error, setError] = useState(null);
   const [totalAmount, setTotalAmount] = useState(0);
   const [animateDeactivateButton, setAnimateDeactivateButton] = useState(false);
+  const [showNFCPaymentModal, setShowNFCPaymentModal] = useState(false);
+  const [nfcPaymentAmount, setNfcPaymentAmount] = useState(0);
+  const [pendingNFCPaymentIndex, setPendingNFCPaymentIndex] = useState(null);
 
   // Ref para la conexión WebSocket
   const socketRef = useRef(null);
@@ -298,6 +302,19 @@ const SalesPage = () => {
         return;
       }
 
+      // Validar que los métodos de pago con NFC tengan datos válidos
+      const nfcPayments = newSale.payment_methods.filter(pm => 
+        pm.payment_type === 'tarjeta_recargable' && pm.nfc_uid
+      );
+
+      // Si hay pagos NFC, verificar que estén validados
+      for (const nfcPayment of nfcPayments) {
+        if (!nfcPayment.validated) {
+          toast.error('Complete la validación NFC para todos los pagos con tarjeta recargable');
+          return;
+        }
+      }
+
       const itemsToSend = [
         ...newSale.items.products.map(product => ({
           product_id: product.product_id,
@@ -325,7 +342,8 @@ const SalesPage = () => {
         payment_methods: newSale.payment_methods.map(pm => ({
           payment_type: pm.payment_type,
           amount: pm.amount,
-          ...(pm.card_id && { card_id: pm.card_id }) // Incluir card_id solo si existe
+          ...(pm.card_id && { card_id: pm.card_id }), // Incluir card_id solo si existe
+          ...(pm.nfc_uid && { nfc_uid: pm.nfc_uid }) // Incluir nfc_uid si existe
         }))
       };
 
@@ -473,6 +491,13 @@ const SalesPage = () => {
     const updatedPayments = newSale.payment_methods.map((method, i) =>
       i === index ? { ...method, [field]: value } : method
     );
+    
+    // Si se cambió el tipo de pago y ahora es tarjeta_recargable, limpiar campos NFC
+    if (field === 'payment_type' && value !== 'tarjeta_recargable') {
+      updatedPayments[index].card_id = '';
+      updatedPayments[index].nfc_uid = '';
+    }
+    
     setNewSale(prev => ({
       ...prev,
       payment_methods: updatedPayments
@@ -484,6 +509,70 @@ const SalesPage = () => {
       ...prev,
       payment_methods: prev.payment_methods.filter((_, index) => index !== indexToRemove)
     }));
+  };
+
+  // NUEVA FUNCIÓN PARA ABRIR MODAL NFC
+  const handleOpenNFCModal = (paymentIndex) => {
+    const payment = newSale.payment_methods[paymentIndex];
+    if (!payment || payment.amount <= 0) {
+      toast.error('Ingrese un monto válido antes de usar NFC');
+      return;
+    }
+    
+    setNfcPaymentAmount(payment.amount);
+    setPendingNFCPaymentIndex(paymentIndex);
+    setShowNFCPaymentModal(true);
+  };
+
+  // NUEVA FUNCIÓN PARA MANEJAR ÉXITO DE PAGO NFC
+  const handleNFCPaymentSuccess = (paymentData) => {
+    if (pendingNFCPaymentIndex !== null) {
+      // Actualizar el método de pago con los datos NFC
+      const updatedPayments = [...newSale.payment_methods];
+      updatedPayments[pendingNFCPaymentIndex] = {
+        ...updatedPayments[pendingNFCPaymentIndex],
+        nfc_uid: paymentData.nfc_uid,
+        card_id: paymentData.card_id || '',
+        validated: true // Marcar como validado
+      };
+      
+      setNewSale(prev => ({
+        ...prev,
+        payment_methods: updatedPayments
+      }));
+      
+      toast.success(`Pago NFC validado: ${paymentData.card_data?.client_name} - $${paymentData.amount.toFixed(2)}`);
+    }
+    
+    setShowNFCPaymentModal(false);
+    setPendingNFCPaymentIndex(null);
+    setNfcPaymentAmount(0);
+  };
+
+  // NUEVA FUNCIÓN PARA MANEJAR ERROR DE PAGO NFC
+  const handleNFCPaymentError = (error) => {
+    toast.error(`Error en pago NFC: ${error}`);
+    setShowNFCPaymentModal(false);
+    setPendingNFCPaymentIndex(null);
+    setNfcPaymentAmount(0);
+  };
+
+  // NUEVA FUNCIÓN PARA LIMPIAR DATOS NFC
+  const handleClearNFCData = (paymentIndex) => {
+    const updatedPayments = [...newSale.payment_methods];
+    updatedPayments[paymentIndex] = {
+      ...updatedPayments[paymentIndex],
+      nfc_uid: '',
+      card_id: '',
+      validated: false
+    };
+    
+    setNewSale(prev => ({
+      ...prev,
+      payment_methods: updatedPayments
+    }));
+    
+    toast.info('Datos NFC limpiados');
   };
 
   const handleFinalizeSale = async (saleId) => {
@@ -766,7 +855,7 @@ const SalesPage = () => {
                 
                 <div className="items-container">
                   {newSale.payment_methods.map((method, index) => (
-                    <div key={index} className="payment-row">
+                    <div key={index} className="payment-row enhanced">
                       <select
                         value={method.payment_type}
                         onChange={(e) => handlePaymentMethodChange(index, 'payment_type', e.target.value)}
@@ -777,6 +866,7 @@ const SalesPage = () => {
                         <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
                         <option value="tarjeta_recargable">🎫 Tarjeta Recargable</option>
                       </select>
+                      
                       <input
                         type="number"
                         placeholder="Monto"
@@ -786,16 +876,45 @@ const SalesPage = () => {
                         step="0.01"
                         required
                       />
+                      
                       {method.payment_type === 'tarjeta_recargable' && (
-                        <input
-                          type="text"
-                          placeholder="ID de Tarjeta"
-                          value={method.card_id}
-                          onChange={(e) => handlePaymentMethodChange(index, 'card_id', e.target.value)}
-                          className="modern-input"
-                          required
-                        />
+                        <div className="nfc-payment-controls">
+                          {!method.nfc_uid ? (
+                            <>
+                              <input
+                                type="text"
+                                placeholder="ID de Tarjeta (opcional)"
+                                value={method.card_id}
+                                onChange={(e) => handlePaymentMethodChange(index, 'card_id', e.target.value)}
+                                className="modern-input card-id-input"
+                              />
+                              <button 
+                                type="button" 
+                                onClick={() => handleOpenNFCModal(index)}
+                                className="nfc-btn"
+                                disabled={!method.amount || method.amount <= 0}
+                              >
+                                📱 NFC
+                              </button>
+                            </>
+                          ) : (
+                            <div className="nfc-validated">
+                              <span className="nfc-status">
+                                ✅ NFC: {method.nfc_uid}
+                              </span>
+                              <button 
+                                type="button" 
+                                onClick={() => handleClearNFCData(index)}
+                                className="clear-nfc-btn"
+                                title="Limpiar datos NFC"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
+                      
                       <button type="button" onClick={() => handleRemovePaymentMethod(index)} className="remove-btn">
                         <span>−</span>
                       </button>
@@ -1121,6 +1240,15 @@ const SalesPage = () => {
           </details>
         </div>
       </div>
+      
+      {/* Modal NFC Payment */}
+      <NFCPaymentModal
+        isOpen={showNFCPaymentModal}
+        onClose={() => setShowNFCPaymentModal(false)}
+        amount={nfcPaymentAmount}
+        onPaymentSuccess={handleNFCPaymentSuccess}
+        onPaymentError={handleNFCPaymentError}
+      />
       
       <ToastContainer 
         position="bottom-right" 

@@ -5,6 +5,7 @@ from app.repositories.product_repository import ProductRepository
 from app.repositories.service_cycle_repository import ServiceCycleRepository
 from app.repositories.washer_repository import WasherRepository
 from app.repositories.dryer_repository import DryerRepository
+from app.services.nfc_payment_service import NFCPaymentService
 from app.schemas.sale_schema import (
     sale_schema,
     sale_update_schema,
@@ -29,6 +30,7 @@ class SaleService:
         self.service_cycle_repository = ServiceCycleRepository()
         self.washer_repository = WasherRepository()
         self.dryer_repository = DryerRepository()
+        self.nfc_payment_service = NFCPaymentService()
     
     def create_sale(self, sale_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -40,9 +42,15 @@ class SaleService:
         Returns:
             Dict: Resultado de la operación
         """
+        logger.info(f"🔍 [sale_service] Iniciando create_sale")
+        logger.info(f"🔍 [sale_service] Datos recibidos: {sale_data}")
+        
         try:
             # Validar datos básicos
+            logger.info(f"🔍 [sale_service] Validando datos con schema...")
             validated_data = sale_schema.load(sale_data)
+            logger.info(f"🔍 [sale_service] Datos validados exitosamente: {validated_data}")
+            
             if not validated_data or not isinstance(validated_data, dict):
                 return {
                     'success': False,
@@ -117,7 +125,8 @@ class SaleService:
                 }
                 
         except ValidationError as e:
-            logger.error(f"Error de validación en venta: {e.messages}")
+            logger.error(f"❌ [sale_service] Error de validación en venta: {e.messages}")
+            logger.error(f"❌ [sale_service] Error completo: {e}")
             return {
                 'success': False,
                 'message': 'Datos de entrada inválidos',
@@ -495,13 +504,22 @@ class SaleService:
             
             # Validar pagos con tarjeta recargable
             if payment['payment_type'] == 'tarjeta_recargable':
+                # CASOS: card_id tradicional vs nfc_uid
                 card_id = payment.get('card_id')
-                if not card_id:
-                    return {'valid': False, 'message': 'ID de tarjeta requerido para pago con tarjeta recargable'}
+                nfc_uid = payment.get('nfc_uid')
                 
-                validation = self.card_repository.validate_card_for_payment(card_id, amount)
-                if not validation['valid']:
-                    return {'valid': False, 'message': f"Tarjeta: {validation['message']}"}
+                if nfc_uid:
+                    # NUEVO: Validación NFC
+                    validation = self.card_repository.validate_nfc_payment(nfc_uid, amount)
+                    if not validation['valid']:
+                        return {'valid': False, 'message': f"Tarjeta NFC: {validation['message']}"}
+                elif card_id:
+                    # EXISTENTE: Validación por card_id
+                    validation = self.card_repository.validate_card_for_payment(card_id, amount)
+                    if not validation['valid']:
+                        return {'valid': False, 'message': f"Tarjeta: {validation['message']}"}
+                else:
+                    return {'valid': False, 'message': 'ID de tarjeta o UID NFC requerido para pago con tarjeta recargable'}
         
         # Verificar que el total de pagos coincida
         if abs(total_paid - total_amount) > 0.01:
@@ -514,13 +532,20 @@ class SaleService:
         try:
             for payment in payment_methods:
                 if payment['payment_type'] == 'tarjeta_recargable':
-                    card_id = payment['card_id']
                     amount = float(payment['amount'])
+                    card_id = payment.get('card_id')
+                    nfc_uid = payment.get('nfc_uid')
                     
-                    # Descontar saldo de la tarjeta
-                    result = self.card_repository.update_balance(card_id, amount, 'subtract')
-                    if not result:
-                        return {'success': False, 'message': f'Error al procesar pago con tarjeta {card_id}'}
+                    if nfc_uid:
+                        # NUEVO: Procesar pago NFC
+                        result = self.card_repository.process_nfc_payment(nfc_uid, amount)
+                        if not result['success']:
+                            return {'success': False, 'message': f'Error al procesar pago NFC: {result["message"]}'}
+                    elif card_id:
+                        # EXISTENTE: Procesar pago tradicional
+                        result = self.card_repository.update_balance(card_id, amount, 'subtract')
+                        if not result:
+                            return {'success': False, 'message': f'Error al procesar pago con tarjeta {card_id}'}
             
             return {'success': True, 'message': 'Pagos procesados exitosamente'}
             
@@ -724,4 +749,46 @@ class SaleService:
             })
             logger.info(f"Evento emitido: máquina {machine_id} - {operation}")
         except Exception as e:
-            logger.error(f"Error emitiendo evento de máquina: {e}") 
+            logger.error(f"Error emitiendo evento de máquina: {e}")
+
+    def create_sale_with_nfc_payment(self, sale_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Crear venta con validación y procesamiento NFC automático
+        
+        Args:
+            sale_data: Datos de la venta con payment_methods conteniendo nfc_uid
+            
+        Returns:
+            Dict: Resultado de la operación
+        """
+        try:
+            # Validar que hay métodos de pago NFC
+            nfc_payments = [pm for pm in sale_data.get('payment_methods', []) 
+                           if pm.get('payment_type') == 'tarjeta_recargable' and pm.get('nfc_uid')]
+            
+            if not nfc_payments:
+                # Si no hay pagos NFC, usar el método normal
+                return self.create_sale(sale_data)
+            
+            # Validar cada pago NFC antes de proceder
+            for nfc_payment in nfc_payments:
+                nfc_uid = nfc_payment['nfc_uid']
+                amount = float(nfc_payment['amount'])
+                
+                validation = self.card_repository.validate_nfc_payment(nfc_uid, amount)
+                if not validation['valid']:
+                    return {
+                        'success': False,
+                        'message': f'Validación NFC falló: {validation["message"]}',
+                        'error_type': 'nfc_validation_failed'
+                    }
+            
+            # Si todas las validaciones pasan, crear la venta normalmente
+            return self.create_sale(sale_data)
+            
+        except Exception as e:
+            logger.error(f"Error en venta con pago NFC: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno al procesar venta con NFC'
+            } 

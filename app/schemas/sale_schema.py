@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate, validates, ValidationError, post_load
+from marshmallow import Schema, fields, validate, validates, ValidationError, post_load, INCLUDE
 from typing import Dict, Any
 
 class ProductItemSchema(Schema):
@@ -65,7 +65,9 @@ class PaymentMethodSchema(Schema):
     """
     Schema para métodos de pago
     """
-    
+    class Meta:
+        unknown = INCLUDE  # Permitir campos desconocidos como nfc_uid
+
     payment_type = fields.Str(
         required=True,
         validate=validate.OneOf(['efectivo', 'tarjeta_credito', 'tarjeta_recargable']),
@@ -78,7 +80,8 @@ class PaymentMethodSchema(Schema):
     )
     card_id = fields.Str(allow_none=True)
     reference = fields.Str(allow_none=True)
-    
+    nfc_uid = fields.Str(allow_none=True)  # Aceptar nfc_uid aunque no se use en validación
+
     @validates('card_id')
     def validate_card_id(self, value: str) -> None:
         """
@@ -107,13 +110,16 @@ class SaleSchema(Schema):
     """
     Schema para validación de ventas
     """
-    
+    class Meta:
+        unknown = INCLUDE  # Permitir campos desconocidos en la raíz si llegan
+
     _id = fields.Str(dump_only=True)
     client_id = fields.Str(allow_none=True)
     employee_id = fields.Str(
         required=True,
         error_messages={'required': 'El ID del empleado es requerido'}
     )
+    nfc_uid = fields.Str(required=False)
     store_id = fields.Str(
         required=True,
         error_messages={'required': 'El ID de la tienda es requerido'}

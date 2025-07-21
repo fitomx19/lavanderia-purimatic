@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.sale_service import SaleService
+from app.services.nfc_payment_service import NFCPaymentService
 from app.utils.auth_utils import employee_required, admin_required
 from app.utils.response_utils import success_response, error_response, paginated_response
 from app import socketio # Importar la instancia de socketio
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Crear blueprint para rutas de ventas
 sale_bp = Blueprint('sales', __name__)
 sale_service = SaleService()
+nfc_payment_service = NFCPaymentService()
 
 @sale_bp.route('/sales', methods=['POST'])
 @employee_required
@@ -294,4 +296,128 @@ def check_services_now(current_user):
             return error_response(result['message'], 500)
             
     except Exception as e:
+        return error_response('Error interno del servidor', 500)
+
+@sale_bp.route('/nfc/validate-payment', methods=['POST'])
+@employee_required
+def validate_nfc_payment(current_user):
+    """
+    Validar pago con tarjeta NFC
+    POST /api/sales/nfc/validate-payment
+    
+    Body:
+    {
+        "amount": 25.50,
+        "timeout": 30
+    }
+    """
+    try:
+        if not request.is_json or not request.get_json():
+            return error_response('Datos JSON requeridos', 400)
+        
+        data = request.get_json()
+        amount = data.get('amount')
+        timeout = data.get('timeout', 30)
+        
+        if not amount or amount <= 0:
+            return error_response('Monto requerido y debe ser mayor a cero', 400)
+        
+        # Validar pago NFC
+        result = nfc_payment_service.validate_payment_with_nfc(
+            amount=float(amount), 
+            timeout=int(timeout)
+        )
+        
+        if result['success']:
+            return success_response(
+                data={
+                    'card_data': result.get('card_data', {}),
+                    'logs': result.get('logs', []),
+                    'nfc_uid': result.get('nfc_uid')
+                },
+                message=result['message']
+            )
+        else:
+            return error_response(
+                message=result['message'],
+                status_code=400,
+                errors={'error_type': result.get('error_type'), 'card_data': result.get('card_data'), 'logs': result.get('logs', [])}
+            )
+            
+    except Exception as e:
+        logger.error(f"Error en validación NFC: {e}")
+        return error_response('Error interno del servidor', 500)
+
+@sale_bp.route('/nfc/process-payment', methods=['POST'])
+@employee_required
+def process_nfc_payment(current_user):
+    """
+    Procesar pago con tarjeta NFC
+    POST /api/sales/nfc/process-payment
+    
+    Body:
+    {
+        "nfc_uid": "91AC001E",
+        "amount": 25.50
+    }
+    """
+    try:
+        if not request.is_json or not request.get_json():
+            return error_response('Datos JSON requeridos', 400)
+        
+        data = request.get_json()
+        nfc_uid = data.get('nfc_uid')
+        amount = data.get('amount')
+        
+        if not nfc_uid:
+            return error_response('UID NFC requerido', 400)
+        
+        if not amount or amount <= 0:
+            return error_response('Monto requerido y debe ser mayor a cero', 400)
+        
+        # Procesar pago NFC
+        result = nfc_payment_service.process_nfc_payment(
+            nfc_uid=nfc_uid,
+            amount=float(amount)
+        )
+        
+        if result['success']:
+            return success_response(
+                data=result.get('card_data', {}),
+                message=result['message']
+            )
+        else:
+            return error_response(
+                message=result['message'],
+                status_code=400,
+                errors={'error_type': result.get('error_type')}
+            )
+            
+    except Exception as e:
+        logger.error(f"Error procesando pago NFC: {e}")
+        return error_response('Error interno del servidor', 500)
+
+@sale_bp.route('/nfc/status', methods=['GET'])
+@employee_required
+def get_nfc_status(current_user):
+    """
+    Obtener estado del lector NFC
+    GET /api/sales/nfc/status
+    """
+    try:
+        result = nfc_payment_service.get_nfc_status()
+        
+        if result.get('success', False):
+            return success_response(
+                data=result.get('data', {}),
+                message=result.get('message', 'Estado NFC obtenido')
+            )
+        else:
+            return error_response(
+                message=result.get('message', 'Error al obtener estado NFC'),
+                status_code=503
+            )
+            
+    except Exception as e:
+        logger.error(f"Error obteniendo estado NFC: {e}")
         return error_response('Error interno del servidor', 500)
