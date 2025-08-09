@@ -169,8 +169,8 @@ def complete_sale(current_user, sale_id):
     """
     try:
         result = sale_service.complete_sale(sale_id)
-        
-        if result['success']:
+
+        if result.get('success'):
             # Emitir evento WebSocket para notificar venta completada y estado de máquinas
             socketio.emit('sale_updated', result['data'])
             socketio.emit('machine_status_updated')
@@ -179,7 +179,13 @@ def complete_sale(current_user, sale_id):
                 message=result['message']
             )
         else:
-            return error_response(result['message'], 400)
+            # Enviar detalles si falló por ESP32
+            status_code = 400
+            errors = None
+            if result.get('error_type') == 'esp32_activation_failed':
+                status_code = 503
+                errors = {'error_type': 'esp32_activation_failed'}
+            return error_response(result.get('message', 'Error al completar la venta'), status_code, errors=errors)
             
     except Exception as e:
         logger.error(f"Error al completar venta: {e}")

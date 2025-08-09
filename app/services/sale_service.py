@@ -12,6 +12,9 @@ from app.schemas.sale_schema import (
     sale_response_schema,
     sales_response_schema
 )
+
+# Agregar esta importación al inicio del archivo
+from app.services.esp32_service import ESP32Service
 from marshmallow import ValidationError
 from datetime import datetime, timedelta
 import logging
@@ -31,6 +34,8 @@ class SaleService:
         self.washer_repository = WasherRepository()
         self.dryer_repository = DryerRepository()
         self.nfc_payment_service = NFCPaymentService()
+        self.esp32_service = ESP32Service()  
+        self._esp32_last_error: Optional[str] = None
     
     def create_sale(self, sale_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -338,13 +343,45 @@ class SaleService:
 
                     if machine_id and service_cycle_id and duration is not None:
                         # Capturar los valores de started_at y estimated_end_at
-                        success, started_at_val, estimated_end_at_val = self._activate_machine_service(machine_id, sale_id, i, service_cycle_id, duration)
+                        success, started_at_val, estimated_end_at_val = self._activate_machine_service(
+                            machine_id, sale_id, i, service_cycle_id, duration
+                        )
                         if success:
                             # Actualizar estado del servicio en la venta, pasando los nuevos tiempos
-                            self.sale_repository.update_service_status(sale_id, i, 'active', started_at=started_at_val, estimated_end_at=estimated_end_at_val)
+                            self.sale_repository.update_service_status(
+                                sale_id, i, 'active', started_at=started_at_val, estimated_end_at=estimated_end_at_val
+                            )
                         else:
-                            logger.error(f"No se pudo activar la máquina {machine_id} para la venta {sale_id}.")
-                            # Considerar manejar el error, ej. marcar la venta como cancelada o el servicio como fallido
+                            # Falla ESP32: revertir estado de la máquina y no continuar la operación
+                            error_message = getattr(self, '_esp32_last_error', None) or \
+                                f"ESP32: fallo de activación para máquina {machine_id}"
+                            logger.error(error_message)
+
+                            try:
+                                # Revertir máquina a disponible y limpiar current_service
+                                revert_ops = {
+                                    '$set': {'estado': 'disponible'},
+                                    '$unset': {'current_service': ''}
+                                }
+                                updated_machine = None
+                                machine = self._get_machine_by_id(machine_id)
+                                if machine:
+                                    if machine.get('tipo') == 'lavadora':
+                                        self.washer_repository.update_document_by_id(machine_id, revert_ops)
+                                        updated_machine = self.washer_repository.find_by_id(machine_id)
+                                    elif machine.get('tipo') == 'secadora' or 'capacidad' in machine:
+                                        self.dryer_repository.update_document_by_id(machine_id, revert_ops)
+                                        updated_machine = self.dryer_repository.find_by_id(machine_id)
+                                if updated_machine:
+                                    self._emit_machine_update(machine_id, updated_machine, 'available')
+                            except Exception as revert_err:
+                                logger.error(f"Error revirtiendo estado de máquina {machine_id} tras fallo ESP32: {revert_err}")
+
+                            return {
+                                'success': False,
+                                'message': error_message,
+                                'error_type': 'esp32_activation_failed'
+                            }
                     
                     # La actualización del estado se mueve dentro del if success
                     # self.sale_repository.update_service_status(sale_id, i, 'active') 
@@ -613,6 +650,31 @@ class SaleService:
                 logger.error(f"Máquina {machine_id} no encontrada para activación.")
                 return False, None, None # Devuelve False y None para los tiempos
 
+            # NUEVO: Enviar comando al ESP32 físico. Si falla, cancelar la operación
+            try:
+                esp32_id = machine.get('esp32_id')
+                if not esp32_id:
+                    self._esp32_last_error = f"ESP32: máquina {machine_id} sin esp32_id configurado"
+                    logger.error(self._esp32_last_error)
+                    return False, None, None
+
+                machine_data = {
+                    'machine_id': machine_id,
+                    'start_time': current_time.strftime('%H:%M:%S'),
+                    'end_time': estimated_end_time.strftime('%H:%M:%S'),
+                    'service_cycle_id': service_cycle_id,
+                    'sale_id': sale_id
+                }
+                esp32_result = self.esp32_service.start_machine(esp32_id, machine_data)
+                if not esp32_result.get('success'):
+                    self._esp32_last_error = f"ESP32: fallo al activar máquina {machine_id} - {esp32_result.get('message')}"
+                    logger.error(self._esp32_last_error)
+                    return False, None, None
+            except Exception as e:
+                self._esp32_last_error = f"ESP32: error de comunicación para máquina {machine_id} - {e}"
+                logger.error(self._esp32_last_error)
+                return False, None, None
+
             # Solo actualizar los timestamps dentro de current_service
             update_operators = {
                 '$set': {
@@ -661,7 +723,27 @@ class SaleService:
                 estimated_end_at = service_info['estimated_end_at']
 
                 if estimated_end_at and current_time >= estimated_end_at:
-                    # Desactivar máquina
+                    # Intentar detener la máquina física vía ESP32 (no bloqueante)
+                    try:
+                        machine = self._get_machine_by_id(machine_id)
+                        if machine:
+                            esp32_id = machine.get('esp32_id')
+                            if esp32_id:
+                                stop_payload = {
+                                    'machine_id': machine_id,
+                                    'end_time': current_time.strftime('%H:%M:%S'),
+                                    'sale_id': sale_id,
+                                    'service_index': service_index
+                                }
+                                stop_result = self.esp32_service.stop_machine(esp32_id, stop_payload)
+                                if not stop_result.get('success'):
+                                    logger.error(f"Error al detener ESP32 {esp32_id} para máquina {machine_id}: {stop_result.get('message')}")
+                            else:
+                                logger.warning(f"Máquina {machine_id} no tiene esp32_id configurado para detener")
+                    except Exception as stop_err:
+                        logger.error(f"Error de comunicación al detener ESP32 para máquina {machine_id}: {stop_err}")
+
+                    # Desactivar máquina en BD
                     machine = self._get_machine_by_id(machine_id)
                     if machine:
                         update_operators = {

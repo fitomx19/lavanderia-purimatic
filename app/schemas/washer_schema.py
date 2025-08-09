@@ -29,6 +29,12 @@ class WasherSchema(Schema):
         required=True,
         error_messages={'required': 'El ID de tienda es requerido'}
     )
+    esp32_id = fields.Str(
+        required=False,
+        allow_none=True,
+        validate=validate.Length(min=1, max=50),
+        missing=None
+    )
     is_active = fields.Bool(missing=True)
     tipo = fields.Str(missing='lavadora')
     created_at = fields.DateTime(dump_only=True)

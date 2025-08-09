@@ -1109,17 +1109,25 @@ const SalesPage = () => {
                               onClick={async () => {
                                 try {
                                   const response = await completeSale(sale._id);
-                                  toast.success(response.message);
+                                  toast.success(response.message || 'Venta completada y servicios activados');
+                                  // Éxito explícito de ESP32 (si la venta se completa, el ESP32 fue notificado)
+                                  toast.success('ESP32 activado correctamente');
                                   fetchAndUpdateSalesAndMachines();
                                   setAnimateDeactivateButton(true);
                                   setTimeout(() => setAnimateDeactivateButton(false), 2000);
                                 } catch (err) {
-                                  toast.error('Error al completar la venta: ' + (err.response ? err.response.data.message : err.message));
+                                  const apiMsg = err?.response?.data?.message;
+                                  const errorType = err?.response?.data?.errors?.error_type;
+                                  if (errorType === 'esp32_activation_failed') {
+                                    toast.error(`Error ESP32: ${apiMsg || 'Fallo al activar la máquina'}`);
+                                  } else {
+                                    toast.error('Error al completar la venta: ' + (apiMsg || err.message));
+                                  }
                                 }
                               }} 
                               className="action-btn complete"
                             >
-                              ✅ Iniciar 
+                              ✅ Iniciar operación
                             </button>
                           )}
                           {sale.status === 'completed' && sale.allServicesCompleted && sale.items.services.length > 0 && (
