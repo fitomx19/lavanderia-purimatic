@@ -39,7 +39,7 @@ class ESP32Service:
             payload = {
                 "esp32_url": esp32_url,
                 "laundry_data": {
-                    "washer_id": machine_data.get("machine_id") or esp32_id,
+                    "washer_id":  esp32_id,
                     "start_time": machine_data.get("start_time"), 
                     "end_time": machine_data.get("end_time"),
                     "status": "starting"
@@ -89,8 +89,10 @@ class ESP32Service:
             payload = {
                 "esp32_url": esp32_url,
                 "laundry_data": {
-                    "washer_id": machine_data.get("machine_id") or esp32_id,
-                    "status": "finished"
+                    "washer_id":     esp32_id,
+                    "status": "finished",
+                    "start_time": machine_data.get("start_time"), 
+                    "end_time": machine_data.get("end_time")
                 }
             }
             

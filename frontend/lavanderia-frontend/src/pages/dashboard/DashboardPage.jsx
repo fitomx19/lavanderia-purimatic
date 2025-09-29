@@ -40,8 +40,8 @@ const DashboardPage = () => {
             <p>Gestionar productos disponibles</p>
           </div>
           <div className="dashboard-card" onClick={() => navigate('/sales')}>
-            <h2>Ventas</h2>
-            <p>Ver historial de ventas</p>
+            <h2>Aplicación Ventas</h2>
+            <p>App principal de ventas</p>
           </div>
           <div className="dashboard-card" onClick={() => navigate('/service-cycles')}>
             <h2>Ciclos de servicio</h2>
