@@ -855,69 +855,81 @@ const SalesPage = () => {
                 
                 <div className="items-container">
                   {newSale.payment_methods.map((method, index) => (
-                    <div key={index} className="payment-row enhanced">
-                      <select
-                        value={method.payment_type}
-                        onChange={(e) => handlePaymentMethodChange(index, 'payment_type', e.target.value)}
-                        className="modern-select"
-                        required
-                      >
-                        <option value="efectivo">💵 Efectivo</option>
-                        <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
-                        <option value="tarjeta_recargable">🎫 Tarjeta Recargable</option>
-                      </select>
-                      
-                      <input
-                        type="number"
-                        placeholder="Monto"
-                        value={method.amount}
-                        onChange={(e) => handlePaymentMethodChange(index, 'amount', parseFloat(e.target.value))}
-                        className="modern-input"
-                        step="0.01"
-                        required
-                      />
-                      
+                    <div key={index} className={`payment-row enhanced ${method.payment_type === 'tarjeta_recargable' ? 'nfc-payment-row' : ''}`}>
+                      {/* Primera fila: Tipo de pago, Monto y botón remover */}
+                      <div className="payment-row-header">
+                        <select
+                          value={method.payment_type}
+                          onChange={(e) => handlePaymentMethodChange(index, 'payment_type', e.target.value)}
+                          className="modern-select"
+                          required
+                        >
+                          <option value="efectivo">💵 Efectivo</option>
+                          <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                          <option value="tarjeta_recargable">🎫 Tarjeta Recargable</option>
+                        </select>
+
+                        <input
+                          type="number"
+                          placeholder="Monto"
+                          value={method.amount}
+                          onChange={(e) => handlePaymentMethodChange(index, 'amount', parseFloat(e.target.value))}
+                          className="modern-input"
+                          step="0.01"
+                          required
+                        />
+
+                        <button type="button" onClick={() => handleRemovePaymentMethod(index)} className="remove-btn">
+                          <span>−</span>
+                        </button>
+                      </div>
+
+                      {/* Segunda fila: Controles NFC (solo para tarjeta recargable) */}
                       {method.payment_type === 'tarjeta_recargable' && (
-                        <div className="nfc-payment-controls">
+                        <div className="nfc-payment-section">
+                          <div className="nfc-section-header">
+                            <span className="nfc-label">💳 Pago con Tarjeta NFC</span>
+                            {method.nfc_uid && (
+                              <span className="nfc-amount">Monto: ${method.amount?.toFixed(2) || '0.00'}</span>
+                            )}
+                          </div>
+
                           {!method.nfc_uid ? (
-                            <>
-                              <input
-                                type="text"
-                                placeholder="ID de Tarjeta (opcional)"
-                                value={method.card_id}
-                                onChange={(e) => handlePaymentMethodChange(index, 'card_id', e.target.value)}
-                                className="modern-input card-id-input"
-                              />
-                              <button 
-                                type="button" 
+                            <div className="nfc-action-area">
+                              <div className="nfc-instructions">
+                                <span className="nfc-icon">📱</span>
+                                <span className="nfc-text">Presiona el botón para leer la tarjeta NFC</span>
+                              </div>
+                              <button
+                                type="button"
                                 onClick={() => handleOpenNFCModal(index)}
                                 className="nfc-btn"
                                 disabled={!method.amount || method.amount <= 0}
                               >
-                                📱 NFC
+                                📡 Leer Tarjeta NFC
                               </button>
-                            </>
+                            </div>
                           ) : (
-                            <div className="nfc-validated">
-                              <span className="nfc-status">
-                                ✅ NFC: {method.nfc_uid}
-                              </span>
-                              <button 
-                                type="button" 
+                            <div className="nfc-validated-section">
+                              <div className="nfc-success-info">
+                                <div className="nfc-success-icon">✅</div>
+                                <div className="nfc-success-details">
+                                  <span className="nfc-success-title">Tarjeta Validada</span>
+                                  <span className="nfc-success-uid">UID: {method.nfc_uid}</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
                                 onClick={() => handleClearNFCData(index)}
                                 className="clear-nfc-btn"
                                 title="Limpiar datos NFC"
                               >
-                                🗑️
+                                🔄 Cambiar Tarjeta
                               </button>
                             </div>
                           )}
                         </div>
                       )}
-                      
-                      <button type="button" onClick={() => handleRemovePaymentMethod(index)} className="remove-btn">
-                        <span>−</span>
-                      </button>
                     </div>
                   ))}
                 </div>

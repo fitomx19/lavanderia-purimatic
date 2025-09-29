@@ -1452,6 +1452,12 @@ body {
   flex-wrap: wrap;
 }
 
+/* Estilos específicos para pagos no NFC */
+.payment-row.enhanced:not(.nfc-payment-row) {
+  flex-direction: row;
+  align-items: center;
+}
+
 .nfc-payment-controls {
   display: flex;
   align-items: center;
@@ -1677,6 +1683,231 @@ body {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Nueva estructura para filas de pago NFC */
+.nfc-payment-row {
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: rgba(76, 175, 80, 0.05);
+  border: 2px solid rgba(76, 175, 80, 0.2);
+  border-radius: 16px;
+}
+
+.payment-row-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.nfc-payment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.nfc-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.nfc-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nfc-amount {
+  font-weight: 700;
+  color: var(--success-color);
+  background: rgba(46, 125, 50, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.nfc-action-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.nfc-instructions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.nfc-instructions .nfc-icon {
+  font-size: 2rem;
+  color: var(--primary-color);
+}
+
+.nfc-instructions .nfc-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.nfc-validated-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: rgba(76, 175, 80, 0.08);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.nfc-success-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.nfc-success-icon {
+  font-size: 1.5rem;
+  color: var(--success-color);
+}
+
+.nfc-success-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nfc-success-title {
+  font-weight: 600;
+  color: var(--success-color);
+  font-size: 1rem;
+}
+
+.nfc-success-uid {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Botón mejorado para NFC */
+.nfc-btn {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.nfc-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #45a049, #4CAF50);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.nfc-btn:disabled {
+  background: rgba(155, 155, 155, 0.6);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.clear-nfc-btn {
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.clear-nfc-btn:hover {
+  background: rgba(244, 67, 54, 1);
+  transform: scale(1.05);
+}
+
+/* Responsive para NFC */
+@media (max-width: 768px) {
+  .nfc-payment-row {
+    padding: 20px;
+  }
+
+  .payment-row-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .nfc-payment-section {
+    padding: 16px;
+  }
+
+  .nfc-action-area,
+  .nfc-validated-section {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .nfc-instructions {
+    text-align: center;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nfc-success-info {
+    text-align: center;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nfc-btn,
+  .clear-nfc-btn {
+    width: 100%;
+  }
+
+  .nfc-section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
   }
 }
 

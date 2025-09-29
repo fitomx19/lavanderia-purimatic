@@ -71,9 +71,8 @@ const NFCPaymentModal = ({
         console.log('✅ [NFCPaymentModal] Validación exitosa, configurando datos de tarjeta');
         setPaymentState('confirmed');
         console.log('🔍 [NFCPaymentModal] response.data:', response);
-        setCardData(response.data);
-        setNfcUid(response.data.card_data.nfc_uid);
-        //data.card_data.nfc_uid
+        setCardData(response.data.card_data);
+        setNfcUid(response.data.nfc_uid);
 
 /*         {
             "data": {
