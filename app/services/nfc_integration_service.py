@@ -67,8 +67,8 @@ class NFCIntegrationService:
             self.logger.error(f"Error vinculando tarjeta NFC: {e}")
             return {"success": False, "message": "Error interno del servidor", "data": None}
     
-    def reload_card_via_nfc(self, amount: float) -> Dict[str, Any]:
-        """Recargar tarjeta detectando UID físico"""
+    def reload_card_via_nfc(self, amount: float, employee_id: str) -> Dict[str, Any]:
+        """Recargar tarjeta detectando UID físico y registrar transacción"""
         try:
             # 1. Validar monto
             if amount <= 0:
@@ -102,9 +102,16 @@ class NFCIntegrationService:
             if not card.get('is_active', False):
                 return {"success": False, "message": "Tarjeta inactiva", "data": None}
             
-            # 5. Agregar saldo
+            # 5. Agregar saldo con registro de transacción
             old_balance = float(card.get('balance', 0))
-            updated_card = self.card_repository.update_balance(card['_id'], amount, 'add')
+            updated_card = self.card_repository.update_balance(
+                card['_id'], 
+                amount, 
+                'add',
+                employee_id,
+                'recarga_nfc',
+                notes=f'Recarga via NFC - UID: {uid}'
+            )
             
             if updated_card:
                 new_balance = float(updated_card['balance'])

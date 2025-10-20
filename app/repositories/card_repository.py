@@ -80,14 +80,18 @@ class CardRepository(BaseRepository):
         )
         return result['documents']
     
-    def update_balance(self, card_id: str, amount: float, operation: str) -> Optional[Dict[str, Any]]:
+    def update_balance(self, card_id: str, amount: float, operation: str, employee_id: str, transaction_type: str, sale_id: Optional[str] = None, notes: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
-        Actualizar saldo de tarjeta
+        Actualizar saldo de tarjeta y registrar transacción
         
         Args:
             card_id: ID de la tarjeta
             amount: Monto a aplicar
             operation: Tipo de operación (add, subtract)
+            employee_id: ID del empleado que realiza la operación
+            transaction_type: Tipo de transacción para registro
+            sale_id: ID de venta (opcional, para pagos)
+            notes: Notas adicionales (opcional)
             
         Returns:
             Dict: Tarjeta actualizada o None
@@ -108,6 +112,23 @@ class CardRepository(BaseRepository):
         if new_balance > 1000:
             return None
         
+        # Registrar transacción ANTES de actualizar saldo
+        from app.repositories.card_transaction_repository import CardTransactionRepository
+        transaction_repo = CardTransactionRepository()
+        
+        transaction_data = {
+            'card_id': card_id,
+            'amount': amount,
+            'transaction_type': transaction_type,
+            'balance_before': current_balance,
+            'balance_after': new_balance,
+            'employee_id': employee_id,
+            'sale_id': sale_id,
+            'notes': notes
+        }
+        
+        transaction_repo.create_transaction(transaction_data)
+        
         # Actualizar saldo usando upsert
         updated_data = {
             '_id': card_id,
@@ -117,14 +138,15 @@ class CardRepository(BaseRepository):
         
         return self.upsert(updated_data)
     
-    def transfer_balance(self, from_card_id: str, to_card_id: str, amount: float) -> Dict[str, Any]:
+    def transfer_balance(self, from_card_id: str, to_card_id: str, amount: float, employee_id: str) -> Dict[str, Any]:
         """
-        Transferir saldo entre tarjetas
+        Transferir saldo entre tarjetas y registrar ambas transacciones
         
         Args:
             from_card_id: ID de la tarjeta origen
             to_card_id: ID de la tarjeta destino
             amount: Monto a transferir
+            employee_id: ID del empleado que realiza la transferencia
             
         Returns:
             Dict: Resultado de la operación
@@ -149,11 +171,52 @@ class CardRepository(BaseRepository):
         if to_balance + amount > 1000:
             return {'success': False, 'message': 'La transferencia excedería el límite de la tarjeta destino'}
         
-        # Realizar transferencia
-        self.update_balance(from_card_id, amount, 'subtract')
-        self.update_balance(to_card_id, amount, 'add')
+        # Registrar transacciones para ambas tarjetas
+        from app.repositories.card_transaction_repository import CardTransactionRepository
+        transaction_repo = CardTransactionRepository()
+        
+        # Transacción de salida (tarjeta origen)
+        transaction_out_data = {
+            'card_id': from_card_id,
+            'amount': amount,
+            'transaction_type': 'transferencia_out',
+            'balance_before': from_balance,
+            'balance_after': from_balance - amount,
+            'employee_id': employee_id,
+            'related_card_id': to_card_id,
+            'notes': f'Transferencia a tarjeta {to_card.get("card_number")}'
+        }
+        transaction_repo.create_transaction(transaction_out_data)
+        
+        # Transacción de entrada (tarjeta destino)
+        transaction_in_data = {
+            'card_id': to_card_id,
+            'amount': amount,
+            'transaction_type': 'transferencia_in',
+            'balance_before': to_balance,
+            'balance_after': to_balance + amount,
+            'employee_id': employee_id,
+            'related_card_id': from_card_id,
+            'notes': f'Transferencia desde tarjeta {from_card.get("card_number")}'
+        }
+        transaction_repo.create_transaction(transaction_in_data)
+        
+        # Actualizar saldos directamente (sin registrar transacciones nuevamente)
+        self.collection.update_one(
+            {'_id': self._get_object_id(from_card_id)},
+            {'$set': {'balance': from_balance - amount, 'last_used': self._get_current_datetime(), 'updated_at': self._get_current_datetime()}}
+        )
+        self.collection.update_one(
+            {'_id': self._get_object_id(to_card_id)},
+            {'$set': {'balance': to_balance + amount, 'last_used': self._get_current_datetime(), 'updated_at': self._get_current_datetime()}}
+        )
         
         return {'success': True, 'message': 'Transferencia realizada exitosamente'}
+    
+    def _get_object_id(self, id_value):
+        """Helper para convertir string a ObjectId si es necesario"""
+        from bson import ObjectId
+        return ObjectId(id_value) if isinstance(id_value, str) else id_value
     
     def card_number_exists(self, card_number: str, exclude_id: Optional[str] = None) -> bool:
         """
@@ -332,13 +395,15 @@ class CardRepository(BaseRepository):
                 'message': 'Error interno al validar tarjeta'
             }
 
-    def process_nfc_payment(self, nfc_uid: str, amount: float) -> Dict[str, Any]:
+    def process_nfc_payment(self, nfc_uid: str, amount: float, employee_id: str, sale_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Procesar pago NFC descontando saldo
+        Procesar pago NFC descontando saldo y registrando transacción
         
         Args:
             nfc_uid: UID físico de la tarjeta NFC
             amount: Monto a descontar
+            employee_id: ID del empleado que procesa el pago
+            sale_id: ID de la venta asociada (opcional)
             
         Returns:
             Dict: Resultado del procesamiento
@@ -372,10 +437,18 @@ class CardRepository(BaseRepository):
             
             logger.info(f"✅ [card_repository] Validación exitosa, procediendo a descontar saldo")
             
-            # Descontar saldo
+            # Descontar saldo y registrar transacción
             card_id = str(card['_id'])
             logger.info(f"💰 [card_repository] Descontando ${amount:.2f} de la tarjeta {card_id}")
-            updated_card = self.update_balance(card_id, amount, 'subtract')
+            updated_card = self.update_balance(
+                card_id, 
+                amount, 
+                'subtract',
+                employee_id,
+                'pago_venta',
+                sale_id=sale_id,
+                notes=f'Pago en venta con NFC'
+            )
             
             if updated_card:
                 logger.info(f"✅ [card_repository] Pago procesado exitosamente. Nuevo saldo: ${updated_card['balance']:.2f}")

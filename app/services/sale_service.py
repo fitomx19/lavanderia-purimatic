@@ -873,4 +873,90 @@ class SaleService:
             return {
                 'success': False,
                 'message': 'Error interno al procesar venta con NFC'
+            }
+    
+    def get_all_sales_filtered(
+        self,
+        page: int = 1,
+        per_page: int = 50,
+        status: Optional[str] = None,
+        employee_id: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        payment_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Obtener todas las ventas con filtros opcionales
+        
+        Args:
+            page: Página actual
+            per_page: Elementos por página
+            status: Filtrar por estado
+            employee_id: Filtrar por empleado
+            start_date: Fecha inicial (YYYY-MM-DD)
+            end_date: Fecha final (YYYY-MM-DD)
+            payment_type: Filtrar por tipo de pago
+            
+        Returns:
+            Dict: Resultado con ventas y paginación
+        """
+        try:
+            filters = {}
+            
+            # Aplicar filtros
+            if status:
+                filters['status'] = status
+            
+            if employee_id:
+                filters['employee_id'] = employee_id
+            
+            if start_date or end_date:
+                date_filter = {}
+                if start_date:
+                    date_filter['$gte'] = datetime.fromisoformat(start_date)
+                if end_date:
+                    # Agregar un día para incluir todo el día final
+                    end_dt = datetime.fromisoformat(end_date) + timedelta(days=1)
+                    date_filter['$lt'] = end_dt
+                filters['created_at'] = date_filter
+            
+            if payment_type:
+                filters['payment_methods.payment_type'] = payment_type
+            
+            # Obtener ventas con filtros
+            result = self.sale_repository.find_many(
+                filter_criteria=filters,
+                page=page,
+                per_page=per_page,
+                sort_by='created_at',
+                sort_order=-1
+            )
+            
+            # Serializar con schema
+            sales_response = sales_response_schema.dump(result['documents'])
+            
+            return {
+                'success': True,
+                'message': 'Ventas obtenidas exitosamente',
+                'data': {
+                    'sales': sales_response,
+                    'pagination': {
+                        'page': result['page'],
+                        'per_page': result['per_page'],
+                        'total': result['total'],
+                        'total_pages': result['total_pages']
+                    }
+                }
+            }
+            
+        except ValueError as e:
+            return {
+                'success': False,
+                'message': 'Formato de fecha inválido. Use YYYY-MM-DD'
+            }
+        except Exception as e:
+            logger.error(f"Error al obtener ventas filtradas: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno del servidor'
             } 

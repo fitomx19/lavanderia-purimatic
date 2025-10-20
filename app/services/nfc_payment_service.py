@@ -86,20 +86,22 @@ class NFCPaymentService:
                 'error_type': 'internal_error'
             }
     
-    def process_nfc_payment(self, nfc_uid: str, amount: float) -> Dict[str, Any]:
+    def process_nfc_payment(self, nfc_uid: str, amount: float, employee_id: str, sale_id: str = None) -> Dict[str, Any]:
         """
-        Procesar pago NFC con UID ya validado
+        Procesar pago NFC con UID ya validado y registrar transacción
         
         Args:
             nfc_uid: UID de la tarjeta NFC
             amount: Monto a descontar
+            employee_id: ID del empleado que procesa el pago
+            sale_id: ID de la venta asociada (opcional)
             
         Returns:
             Dict: Resultado del procesamiento
         """
         try:
-            # Procesar el pago
-            payment_result = self.card_repository.process_nfc_payment(nfc_uid, amount)
+            # Procesar el pago con registro de transacción
+            payment_result = self.card_repository.process_nfc_payment(nfc_uid, amount, employee_id, sale_id)
             
             if payment_result['success']:
                 return {

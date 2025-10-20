@@ -364,7 +364,8 @@ def process_nfc_payment(current_user):
     Body:
     {
         "nfc_uid": "91AC001E",
-        "amount": 25.50
+        "amount": 25.50,
+        "sale_id": "optional_sale_id"
     }
     """
     try:
@@ -374,6 +375,7 @@ def process_nfc_payment(current_user):
         data = request.get_json()
         nfc_uid = data.get('nfc_uid')
         amount = data.get('amount')
+        sale_id = data.get('sale_id')  # Opcional
         
         if not nfc_uid:
             return error_response('UID NFC requerido', 400)
@@ -381,10 +383,12 @@ def process_nfc_payment(current_user):
         if not amount or amount <= 0:
             return error_response('Monto requerido y debe ser mayor a cero', 400)
         
-        # Procesar pago NFC
+        # Procesar pago NFC con employee_id y sale_id
         result = nfc_payment_service.process_nfc_payment(
             nfc_uid=nfc_uid,
-            amount=float(amount)
+            amount=float(amount),
+            employee_id=current_user['_id'],
+            sale_id=sale_id
         )
         
         if result['success']:
@@ -426,4 +430,51 @@ def get_nfc_status(current_user):
             
     except Exception as e:
         logger.error(f"Error obteniendo estado NFC: {e}")
+        return error_response('Error interno del servidor', 500)
+
+@sale_bp.route('/sales/all-sales', methods=['GET'])
+@employee_required
+def get_all_sales(current_user):
+    """
+    Obtener todas las ventas con filtros opcionales
+    GET /api/sales/all-sales
+    
+    Query params:
+        - page: Página actual (default: 1)
+        - per_page: Elementos por página (default: 50)
+        - status: Filtrar por estado (pending, completed, cancelled, finalized)
+        - employee_id: Filtrar por empleado
+        - start_date: Fecha inicial (formato: YYYY-MM-DD)
+        - end_date: Fecha final (formato: YYYY-MM-DD)
+        - payment_type: Filtrar por tipo de pago (efectivo, tarjeta_credito, tarjeta_recargable)
+    """
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 50))
+        status = request.args.get('status')
+        employee_id = request.args.get('employee_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        payment_type = request.args.get('payment_type')
+        
+        result = sale_service.get_all_sales_filtered(
+            page=page,
+            per_page=per_page,
+            status=status,
+            employee_id=employee_id,
+            start_date=start_date,
+            end_date=end_date,
+            payment_type=payment_type
+        )
+        
+        if result['success']:
+            return success_response(
+                data=result['data'],
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 400)
+            
+    except Exception as e:
+        logger.error(f"Error en get_all_sales: {e}")
         return error_response('Error interno del servidor', 500)

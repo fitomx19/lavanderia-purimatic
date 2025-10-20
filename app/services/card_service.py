@@ -24,12 +24,13 @@ class CardService:
         self.card_repository = CardRepository()
         self.client_repository = UserClientRepository()
     
-    def create_card(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_card(self, card_data: Dict[str, Any], employee_id: str) -> Dict[str, Any]:
         """
-        Crear nueva tarjeta recargable
+        Crear nueva tarjeta recargable y registrar transacción de saldo inicial
         
         Args:
             card_data: Datos de la tarjeta
+            employee_id: ID del empleado que crea la tarjeta
             
         Returns:
             Dict: Resultado de la operación
@@ -66,9 +67,24 @@ class CardService:
             card = self.card_repository.upsert(validated_data)
             
             if card:
-                # Si la tarjeta tiene saldo inicial, actualizar el saldo del cliente
+                # Si la tarjeta tiene saldo inicial, registrar transacción
                 card_balance = validated_data.get('balance', 0)
                 if card_balance > 0:
+                    # Registrar transacción de saldo inicial
+                    from app.repositories.card_transaction_repository import CardTransactionRepository
+                    transaction_repo = CardTransactionRepository()
+                    
+                    transaction_data = {
+                        'card_id': str(card['_id']),
+                        'amount': float(card_balance),
+                        'transaction_type': 'saldo_inicial',
+                        'balance_before': 0.0,
+                        'balance_after': float(card_balance),
+                        'employee_id': employee_id,
+                        'notes': 'Saldo inicial al crear tarjeta'
+                    }
+                    transaction_repo.create_transaction(transaction_data)
+                    
                     # Actualizar saldo del cliente con el saldo inicial de la tarjeta
                     current_balance = client.get('saldo_tarjeta_recargable', 0) if client else 0
                     new_balance = current_balance + float(card_balance)
@@ -141,13 +157,14 @@ class CardService:
                 'message': 'Error interno del servidor'
             }
     
-    def add_balance(self, card_id: str, balance_data: Dict[str, Any]) -> Dict[str, Any]:
+    def add_balance(self, card_id: str, balance_data: Dict[str, Any], employee_id: str) -> Dict[str, Any]:
         """
-        Agregar saldo a una tarjeta
+        Agregar saldo a una tarjeta y registrar transacción
         
         Args:
             card_id: ID de la tarjeta
             balance_data: Datos del saldo a agregar
+            employee_id: ID del empleado que realiza la operación
             
         Returns:
             Dict: Resultado de la operación
@@ -164,11 +181,20 @@ class CardService:
                     'message': 'Tarjeta no encontrada'
                 }
             
-            # Actualizar saldo
+            # Determinar tipo de transacción
+            operation = str(validated_data.get('operation', ''))
+            if operation == 'add':
+                transaction_type = 'recarga_manual'
+            else:
+                transaction_type = 'ajuste_manual'
+            
+            # Actualizar saldo con transacción
             updated_card = self.card_repository.update_balance(
                 card_id, 
                 float(validated_data.get('amount', 0)), 
-                str(validated_data.get('operation', ''))
+                operation,
+                employee_id,
+                transaction_type
             )
             
             if updated_card:
@@ -198,12 +224,13 @@ class CardService:
                 'message': 'Error interno del servidor'
             }
     
-    def transfer_balance(self, transfer_data: Dict[str, Any]) -> Dict[str, Any]:
+    def transfer_balance(self, transfer_data: Dict[str, Any], employee_id: str) -> Dict[str, Any]:
         """
-        Transferir saldo entre tarjetas
+        Transferir saldo entre tarjetas y registrar transacciones
         
         Args:
             transfer_data: Datos de la transferencia
+            employee_id: ID del empleado que realiza la transferencia
             
         Returns:
             Dict: Resultado de la operación
@@ -212,11 +239,12 @@ class CardService:
             # Validar datos
             validated_data = card_transfer_schema.load(transfer_data)
             
-            # Realizar transferencia
+            # Realizar transferencia con registro de transacciones
             result = self.card_repository.transfer_balance(
                 str(validated_data.get('from_card_id', '')),
                 str(validated_data.get('to_card_id', '')),
-                float(validated_data.get('amount', 0))
+                float(validated_data.get('amount', 0)),
+                employee_id
             )
             
             return result
@@ -362,12 +390,13 @@ class CardService:
                 'message': 'Error al vincular tarjeta NFC'
             }
 
-    def reload_card_via_nfc(self, amount: float) -> Dict[str, Any]:
+    def reload_card_via_nfc(self, amount: float, employee_id: str) -> Dict[str, Any]:
         """
-        Recargar tarjeta mediante lectura NFC.
+        Recargar tarjeta mediante lectura NFC y registrar transacción.
         
         Args:
             amount: Monto a recargar en la tarjeta detectada por NFC.
+            employee_id: ID del empleado que realiza la recarga.
         
         Returns:
             Dict: Resultado de la operación de recarga.
@@ -376,7 +405,7 @@ class CardService:
             from app.services.nfc_integration_service import NFCIntegrationService
             nfc_service = NFCIntegrationService()
             # Se delega la lógica de recarga al servicio de integración NFC.
-            return nfc_service.reload_card_via_nfc(amount)
+            return nfc_service.reload_card_via_nfc(amount, employee_id)
         except Exception as e:
             logger.error(f"Error recargando via NFC: {e}")
             return {
@@ -387,7 +416,7 @@ class CardService:
     def query_balance_via_nfc(self) -> Dict[str, Any]:
         """
         Consultar saldo de tarjeta mediante lectura NFC.
-        
+
         Returns:
             Dict: Información del saldo y propietario de la tarjeta.
         """
@@ -401,4 +430,91 @@ class CardService:
             return {
                 'success': False,
                 'message': 'Error al consultar saldo via NFC'
+            }
+
+    def get_transactions(
+        self,
+        page: int = 1,
+        per_page: int = 50,
+        card_id: Optional[str] = None,
+        transaction_type: Optional[str] = None,
+        employee_id: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Obtener transacciones con filtros opcionales
+
+        Args:
+            page: Página actual
+            per_page: Elementos por página
+            card_id: Filtrar por tarjeta
+            transaction_type: Filtrar por tipo
+            employee_id: Filtrar por empleado
+            start_date: Fecha inicial (YYYY-MM-DD)
+            end_date: Fecha final (YYYY-MM-DD)
+
+        Returns:
+            Dict: Transacciones con paginación
+        """
+        try:
+            from app.repositories.card_transaction_repository import CardTransactionRepository
+            from datetime import datetime
+
+            transaction_repo = CardTransactionRepository()
+
+            # Si hay filtros de fecha, usar el método específico
+            if start_date and end_date:
+                start = datetime.fromisoformat(start_date)
+                end = datetime.fromisoformat(end_date)
+                result = transaction_repo.get_transactions_by_date_range(
+                    start_date=start,
+                    end_date=end,
+                    transaction_type=transaction_type,
+                    page=page,
+                    per_page=per_page
+                )
+            # Si hay filtro de tarjeta específica
+            elif card_id:
+                result = transaction_repo.get_transactions_by_card(
+                    card_id=card_id,
+                    page=page,
+                    per_page=per_page
+                )
+            # Si hay filtro de empleado
+            elif employee_id:
+                result = transaction_repo.get_transactions_by_employee(
+                    employee_id=employee_id,
+                    page=page,
+                    per_page=per_page
+                )
+            # Sin filtros, obtener todas
+            else:
+                result = transaction_repo.find_many(
+                    filter_criteria={},
+                    page=page,
+                    per_page=per_page,
+                    sort_by='created_at',
+                    sort_order=-1
+                )
+
+            return {
+                'success': True,
+                'message': 'Transacciones obtenidas exitosamente',
+                'data': {
+                    'transactions': result['documents'],
+                    'pagination': {
+                        'page': result['page'],
+                        'per_page': result['per_page'],
+                        'total': result['total'],
+                        'total_pages': result['total_pages']
+                    }
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error al obtener transacciones: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno del servidor'
             }

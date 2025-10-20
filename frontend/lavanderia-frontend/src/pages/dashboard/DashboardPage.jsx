@@ -51,6 +51,10 @@ const DashboardPage = () => {
             <h2>Clientes</h2>
             <p>Gestionar información de clientes</p>
           </div>
+          <div className="dashboard-card" onClick={() => navigate('/transactions')}>
+            <h2>📊 Transacciones</h2>
+            <p>Ver historial de transacciones de tarjetas</p>
+          </div>
           <div className="dashboard-card" onClick={handleDeactivateMachinesClick}>
             <h2>Reactivar Máquinas</h2>
             <p>Liberar máquinas con ciclos finalizados</p>

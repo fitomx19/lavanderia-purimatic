@@ -23,8 +23,8 @@ def create_card(current_user, client_id):
         data = request.get_json()
         data['client_id'] = client_id
         
-        # Crear tarjeta
-        result = card_service.create_card(data)
+        # Crear tarjeta con employee_id
+        result = card_service.create_card(data, current_user['_id'])
         
         if result['success']:
             return success_response(
@@ -77,8 +77,8 @@ def add_balance(current_user, card_id):
         
         data = request.get_json()
         
-        # Agregar saldo
-        result = card_service.add_balance(card_id, data)
+        # Agregar saldo con employee_id
+        result = card_service.add_balance(card_id, data, current_user['_id'])
         
         if result['success']:
             return success_response(
@@ -109,8 +109,8 @@ def transfer_balance(current_user):
         
         data = request.get_json()
         
-        # Transferir saldo
-        result = card_service.transfer_balance(data)
+        # Transferir saldo con employee_id
+        result = card_service.transfer_balance(data, current_user['_id'])
         
         if result['success']:
             return success_response(message=result['message'])
@@ -196,7 +196,7 @@ def reload_card_nfc(current_user):
         if amount <= 0:
             return error_response('Monto debe ser mayor a 0', 400)
         
-        result = card_service.reload_card_via_nfc(amount)
+        result = card_service.reload_card_via_nfc(amount, current_user['_id'])
         if result['success']:
             return success_response(data=result['data'], message=result['message'])
         else:
@@ -230,7 +230,7 @@ def query_balance_nfc(current_user):
         result = card_service.query_balance_via_nfc()
         if result['success']:
             return success_response(
-                data=result['data'], 
+                data=result['data'],
                 message=result['message']
             )
         else:
@@ -238,5 +238,51 @@ def query_balance_nfc(current_user):
                 message=result['message'],
                 status_code=400
             )
+    except Exception as e:
+        return error_response('Error interno del servidor', 500)
+
+@card_bp.route('/cards/transactions', methods=['GET'])
+@employee_required
+def get_all_transactions(current_user):
+    """
+    Obtener todas las transacciones con filtros opcionales
+    GET /api/cards/transactions
+
+    Query params:
+        - page: Página actual (default: 1)
+        - per_page: Elementos por página (default: 50)
+        - card_id: Filtrar por tarjeta específica
+        - transaction_type: Filtrar por tipo de transacción
+        - employee_id: Filtrar por empleado
+        - start_date: Fecha inicial (formato: YYYY-MM-DD)
+        - end_date: Fecha final (formato: YYYY-MM-DD)
+    """
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 50))
+        card_id = request.args.get('card_id')
+        transaction_type = request.args.get('transaction_type')
+        employee_id = request.args.get('employee_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        result = card_service.get_transactions(
+            page=page,
+            per_page=per_page,
+            card_id=card_id,
+            transaction_type=transaction_type,
+            employee_id=employee_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        if result['success']:
+            return success_response(
+                data=result['data'],
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 400)
+
     except Exception as e:
         return error_response('Error interno del servidor', 500)

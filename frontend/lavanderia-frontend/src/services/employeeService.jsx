@@ -80,4 +80,40 @@ export const createEmployee = async (employeeData) => {
   } catch (error) {
     throw error.response ? error.response.data : new Error('Error de conexión al crear empleado');
   }
+};
+
+export const getAllEmployeesForLookup = async () => {
+  try {
+    const token = getToken();
+    // Obtener todos los empleados con una sola petición (per_page alto)
+    const response = await axios.get(`${API_BASE_URL}/employees`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        page: 1,
+        per_page: 1000, // Obtener todos los empleados
+      },
+    });
+
+    // Transformar a un mapa {employee_id: username} para lookups rápidos
+    const employees = response.data.data || [];
+    const employeeMap = {};
+    employees.forEach(employee => {
+      employeeMap[employee._id] = employee.username || employee.email || 'Sin nombre';
+    });
+
+    return {
+      success: true,
+      employeeMap,
+      employees: employees
+    };
+  } catch (error) {
+    console.error('Error obteniendo empleados para lookup:', error);
+    return {
+      success: false,
+      employeeMap: {},
+      employees: []
+    };
+  }
 }; 

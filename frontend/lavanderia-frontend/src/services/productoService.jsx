@@ -82,3 +82,39 @@ export const deleteProduct = async (id) => {
     throw error.response ? error.response.data : new Error('Error de conexión al eliminar producto');
   }
 };
+
+export const getAllProductsForLookup = async () => {
+  try {
+    const token = getToken();
+    // Obtener todos los productos con una sola petición (per_page alto)
+    const response = await axios.get(`${API_BASE_URL}/products`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        page: 1,
+        per_page: 1000, // Obtener todos los productos
+      },
+    });
+
+    // Transformar a un mapa {product_id: nombre} para lookups rápidos
+    const products = response.data.data || [];
+    const productMap = {};
+    products.forEach(product => {
+      productMap[product._id] = product.nombre || product.name || 'Sin nombre';
+    });
+
+    return {
+      success: true,
+      productMap,
+      products: products
+    };
+  } catch (error) {
+    console.error('Error obteniendo productos para lookup:', error);
+    return {
+      success: false,
+      productMap: {},
+      products: []
+    };
+  }
+};

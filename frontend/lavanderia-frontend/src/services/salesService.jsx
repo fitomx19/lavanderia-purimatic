@@ -181,3 +181,25 @@ export const processNFCPayment = async (nfcUid, amount) => {
     throw error.response ? error.response.data : new Error('Error de conexión al procesar pago NFC');
   }
 };
+
+// Función para obtener todas las ventas con filtros
+export const getAllSales = async (page = 1, perPage = 50, filters = {}) => {
+  try {
+    const token = getToken();
+    const params = {
+      page,
+      per_page: perPage,
+      ...filters
+    };
+
+    const response = await axios.get(`${API_BASE_URL}/api/sales/all-sales`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al obtener ventas');
+  }
+};
