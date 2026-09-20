@@ -1,0 +1,102 @@
+.activation-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(38, 50, 56, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+}
+
+.activation-modal {
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+.activation-modal h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #00796b;
+  margin: 0 0 0.5rem;
+}
+
+.activation-modal-lead {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #263238;
+  margin: 0 0 1.25rem;
+}
+
+.activation-service-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.activation-service-list li {
+  background: #e0f7fa;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.activation-service-main {
+  font-weight: 700;
+  color: #004d40;
+  font-size: 1rem;
+}
+
+.activation-service-meta {
+  font-size: 0.875rem;
+  color: #546e7a;
+  font-weight: 600;
+}
+
+.activation-modal-note {
+  color: #546e7a;
+  margin-bottom: 1.5rem;
+}
+
+.activation-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activation-btn-yes,
+.activation-btn-later {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: none;
+  border-radius: 0.9rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.activation-btn-yes {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  color: #fff;
+}
+
+.activation-btn-yes:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.activation-btn-later {
+  background: #eceff1;
+  color: #546e7a;
+}

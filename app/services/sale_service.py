@@ -817,7 +817,57 @@ class SaleService:
                 
         except Exception as e:
             logger.error(f"Error al finalizar venta {sale_id}: {e}")
-            return {'success': False, 'message': 'Error interno del servidor al finalizar la venta'} 
+            return {'success': False, 'message': 'Error interno del servidor al finalizar la venta'}
+
+    def finalize_ready_sales(self) -> Dict[str, Any]:
+        """
+        Finalizar todas las ventas en estado completed cuyos servicios ya terminaron
+        (o que no tienen servicios).
+        """
+        try:
+            closed = []
+            failed = []
+
+            # Obtener ventas completed (paginación amplia; típicamente pocas listas a la vez)
+            result = self.sale_repository.find_by_status('completed', page=1, per_page=500)
+            sales = result.get('documents') or []
+
+            for sale in sales:
+                sale_id = str(sale.get('_id'))
+                services_status = self.sale_repository.get_sale_services_status(sale_id)
+                if services_status['has_services'] and not services_status['all_services_completed']:
+                    continue
+
+                finalize_result = self.finalize_sale(sale_id)
+                if finalize_result.get('success'):
+                    closed.append(finalize_result.get('data'))
+                else:
+                    failed.append({
+                        'sale_id': sale_id,
+                        'message': finalize_result.get('message')
+                    })
+
+            count = len(closed)
+            message = (
+                f'Se cerraron {count} venta(s)'
+                if count > 0
+                else 'No hay ventas listas para cerrar'
+            )
+            return {
+                'success': True,
+                'message': message,
+                'data': {
+                    'closed_count': count,
+                    'closed': closed,
+                    'failed': failed
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error en finalize_ready_sales: {e}")
+            return {
+                'success': False,
+                'message': 'Error interno al cerrar ventas listas'
+            }
 
     def _emit_machine_update(self, machine_id, machine_data, operation):
         """Emitir evento WebSocket cuando cambia estado de máquina"""

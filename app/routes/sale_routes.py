@@ -214,6 +214,30 @@ def finalize_sale(current_user, sale_id):
     except Exception as e:
         return error_response('Error interno del servidor', 500)
 
+@sale_bp.route('/sales/finalize-ready', methods=['POST'])
+@employee_required
+def finalize_ready_sales(current_user):
+    """
+    Finalizar todas las ventas completed cuyos servicios ya terminaron.
+    POST /api/sales/finalize-ready
+    """
+    try:
+        result = sale_service.finalize_ready_sales()
+
+        if result['success']:
+            for closed_sale in (result.get('data') or {}).get('closed') or []:
+                socketio.emit('sale_finalized', closed_sale)
+            return success_response(
+                data=result['data'],
+                message=result['message']
+            )
+        else:
+            return error_response(result['message'], 400)
+
+    except Exception as e:
+        logger.error(f"Error en finalize-ready: {e}")
+        return error_response('Error interno del servidor', 500)
+
 @sale_bp.route('/sales/summary', methods=['GET'])
 @admin_required
 def get_sales_summary(current_user):

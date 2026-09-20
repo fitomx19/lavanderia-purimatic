@@ -83,6 +83,21 @@ export const finalizeSale = async (saleId) => {
   }
 };
 
+// Cerrar todas las ventas ya terminadas (servicios completados)
+export const finalizeReadySales = async () => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_BASE_URL}/api/sales/finalize-ready`, {}, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al cerrar ventas listas');
+  }
+};
+
 // Función para reactivar máquinas (administrativo)
 export const deactivateMachines = async () => {
   try {

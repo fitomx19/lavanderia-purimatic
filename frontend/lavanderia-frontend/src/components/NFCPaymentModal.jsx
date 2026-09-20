@@ -186,20 +186,18 @@ const NFCPaymentModal = ({
     <div className="nfc-payment-modal-overlay">
       <div className="nfc-payment-modal">
         <div className="modal-header">
-          <h2>💳 Pago con Tarjeta NFC</h2>
+          <h2>Tarjeta del cliente</h2>
           <button onClick={handleCancel} className="close-button">×</button>
         </div>
 
         <div className="modal-body">
-          {/* Información del pago */}
           <div className="payment-info">
             <div className="amount-display">
-              <span className="amount-label">Monto a cobrar:</span>
+              <span className="amount-label">Vas a cobrar:</span>
               <span className="amount-value">${validatedAmount.toFixed(2)}</span>
             </div>
           </div>
 
-          {/* Estado del lector NFC */}
           <div className={`nfc-status ${nfcStatus}`}>
             <div className="status-indicator">
               {nfcStatus === 'checking' && <span className="spinner">🔄</span>}
@@ -207,26 +205,25 @@ const NFCPaymentModal = ({
               {nfcStatus === 'unavailable' && <span className="icon">🔴</span>}
             </div>
             <div className="status-text">
-              {nfcStatus === 'checking' && 'Verificando lector NFC...'}
-              {nfcStatus === 'available' && 'Lector NFC conectado y listo'}
-              {nfcStatus === 'unavailable' && 'Lector NFC no disponible'}
+              {nfcStatus === 'checking' && 'Revisando el lector…'}
+              {nfcStatus === 'available' && 'Lector listo'}
+              {nfcStatus === 'unavailable' && 'No se encuentra el lector'}
             </div>
           </div>
 
-          {/* Área principal según el estado */}
           <div className="payment-area">
-            {/* Estado inicial */}
             {paymentState === 'idle' && nfcStatus === 'available' && (
               <div className="idle-state">
-                <div className="nfc-icon">📱</div>
-                <p>Presiona el botón para iniciar la lectura de la tarjeta</p>
+                <div className="nfc-icon">💳</div>
+                <p style={{ fontSize: '1.15rem', fontWeight: 700 }}>
+                  Acerca la tarjeta del cliente al lector
+                </p>
                 <button onClick={handleStartPayment} className="start-payment-btn">
-                  🚀 Acercar Tarjeta para Pago
+                  Acerca la tarjeta
                 </button>
               </div>
             )}
 
-            {/* Esperando tarjeta */}
             {paymentState === 'waiting' && (
               <div className="waiting-state">
                 <div className="nfc-animation">
@@ -237,18 +234,19 @@ const NFCPaymentModal = ({
                   </div>
                   <div className="nfc-icon-center">📡</div>
                 </div>
-                <p className="waiting-text">Acerque la tarjeta al lector NFC...</p>
+                <p className="waiting-text" style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+                  Acerca la tarjeta al lector…
+                </p>
                 <div className="progress-bar">
                   <div className="progress-fill"></div>
                 </div>
               </div>
             )}
 
-            {/* Tarjeta confirmada */}
             {paymentState === 'confirmed' && cardData && (
               <div className="confirmed-state">
                 <div className="success-icon">✅</div>
-                <h3>Tarjeta Detectada</h3>
+                <h3>Tarjeta lista</h3>
                 <div className="card-info">
                   <div className="info-row">
                     <span className="label">Cliente:</span>
@@ -269,46 +267,42 @@ const NFCPaymentModal = ({
                 </div>
                 <div className="confirm-buttons">
                   <button onClick={handleConfirmPayment} className="confirm-btn">
-                    ✓ Confirmar Pago ${validatedAmount.toFixed(2)}
+                    Cobrar ${validatedAmount.toFixed(2)}
                   </button>
                   <button onClick={handleRetry} className="retry-btn">
-                    🔄 Leer Otra Tarjeta
+                    Usar otra tarjeta
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Procesando */}
             {paymentState === 'processing' && (
               <div className="processing-state">
                 <div className="processing-spinner">
                   <div className="spinner"></div>
                 </div>
-                <p>Procesando pago...</p>
+                <p>Cobrando…</p>
               </div>
             )}
 
-            {/* Éxito */}
             {paymentState === 'success' && (
               <div className="success-state">
                 <div className="success-icon">🎉</div>
-                <h3>¡Pago Exitoso!</h3>
-                <p>La venta se creará automáticamente</p>
-                <div className="auto-close">Cerrando en 2 segundos...</div>
+                <h3>¡Listo!</h3>
+                <p>El cobro con tarjeta quedó registrado</p>
+                <div className="auto-close">Cerrando…</div>
               </div>
             )}
 
-            {/* Error */}
             {paymentState === 'error' && (
               <div className="error-state">
                 <div className="error-icon">❌</div>
-                <h3>Error en el Pago</h3>
+                <h3>No se pudo cobrar</h3>
                 <p className="error-message">{errorMessage}</p>
-                
-                {/* Mostrar datos de tarjeta si están disponibles */}
+
                 {cardData && (
                   <div className="error-card-info">
-                    <h4>Información de la Tarjeta:</h4>
+                    <h4>Datos de la tarjeta:</h4>
                     <div className="info-row">
                       <span className="label">Cliente:</span>
                       <span className="value">{cardData.client_name}</span>
@@ -319,41 +313,39 @@ const NFCPaymentModal = ({
                     </div>
                   </div>
                 )}
-                
+
                 <div className="error-buttons">
                   <button onClick={handleRetry} className="retry-btn">
-                    🔄 Intentar Nuevamente
+                    Intentar de nuevo
                   </button>
                   <button onClick={handleCancel} className="cancel-btn">
-                    ❌ Cancelar
+                    Cancelar
                   </button>
                 </div>
               </div>
             )}
 
-            {/* NFC no disponible */}
             {nfcStatus === 'unavailable' && (
               <div className="unavailable-state">
                 <div className="error-icon">🔴</div>
-                <h3>Lector NFC No Disponible</h3>
+                <h3>No hay lector de tarjeta</h3>
                 <p className="error-message">{errorMessage}</p>
                 <div className="unavailable-buttons">
                   <button onClick={checkNFCStatus} className="retry-btn">
-                    🔄 Verificar Nuevamente
+                    Revisar de nuevo
                   </button>
                   <button onClick={handleCancel} className="cancel-btn">
-                    ❌ Cerrar
+                    Cerrar
                   </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Logs en tiempo real */}
           {logs.length > 0 && (
             <div className="logs-section">
               <details>
-                <summary>Ver logs del proceso ({logs.length})</summary>
+                <summary>Detalles técnicos ({logs.length})</summary>
                 <div className="logs-container">
                   {logs.map((log, index) => (
                     <div key={index} className="log-entry">
