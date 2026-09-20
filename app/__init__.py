@@ -1,8 +1,15 @@
+import os
+import time
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import (
+    ConnectionFailure,
+    ServerSelectionTimeoutError,
+    ConfigurationError,
+    OperationFailure,
+)
 import logging
 from flask_socketio import SocketIO # Importar SocketIO
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -82,24 +89,91 @@ def init_extensions(app):
         from app.utils.response_utils import error_response
         return error_response('Token de autorización requerido', 401)
 
-def init_database(app):
-    """Inicializar conexión a MongoDB"""
+def init_database(app, max_retries=3, retry_delay_seconds=3):
+    """
+    Inicializar conexión a MongoDB (Atlas, distinto por tienda).
+
+    Reintenta varias veces antes de rendirse, porque en las máquinas de las
+    tiendas es común que el internet tarde unos segundos en estar listo justo
+    cuando arranca la aplicación. Si todos los intentos fallan, se muestra un
+    mensaje claro indicando qué revisar según el tipo exacto de error.
+    """
     global mongo_client, db
-    
-    try:
-        mongo_client = MongoClient(app.config['MONGODB_URI'])
-        # Probar la conexión
-        mongo_client.admin.command('ping')
-        
-        # Obtener nombre de la base de datos desde la URI
-        db_name = app.config['MONGODB_URI'].split('/')[-1].split('?')[0]
-        db = mongo_client[db_name]
-        
-        app.logger.info(f"Conectado exitosamente a MongoDB: {db_name}")
-        
-    except ConnectionFailure as e:
-        app.logger.error(f"Error al conectar con MongoDB: {e}")
-        raise
+
+    mongo_uri = app.config['MONGODB_URI']
+    last_error = None
+
+    for intento in range(1, max_retries + 1):
+        try:
+            mongo_client = MongoClient(
+                mongo_uri,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+            )
+            # Probar la conexión de verdad (MongoClient() es "perezoso")
+            mongo_client.admin.command('ping')
+
+            # Atlas a veces llega sin nombre de base en la URI
+            # (mongodb+srv://...mongodb.net/?retryWrites=true). En ese caso
+            # el split tradicional deja el nombre vacío y la app "conecta"
+            # a una BD que no es la de la tienda.
+            from urllib.parse import urlparse
+            parsed = urlparse(mongo_uri)
+            db_name = (parsed.path or '').lstrip('/').split('?')[0]
+            if not db_name:
+                db_name = os.environ.get('MONGODB_DB_NAME', 'lavanderia_purimatic')
+            db = mongo_client[db_name]
+
+            app.logger.info(f"Conectado exitosamente a MongoDB: {db_name}")
+            return
+
+        except ConfigurationError as e:
+            # URI mal formada, típicamente el SRV de Atlas mal copiado
+            # o falta dnspython. Reintentar no ayuda aquí.
+            app.logger.error(
+                "❌ Error de configuración en MONGODB_URI. Revisa que la URI "
+                "de MongoDB Atlas esté completa y bien copiada (mongodb+srv://usuario:password@cluster.mongodb.net/basedatos). "
+                f"Detalle: {e}"
+            )
+            raise
+
+        except OperationFailure as e:
+            # Conectó al cluster pero las credenciales/permisos fallan.
+            app.logger.error(
+                "❌ MongoDB Atlas rechazó las credenciales. Revisa el usuario y "
+                "contraseña de la URI, y que ese usuario tenga permisos sobre la base de datos. "
+                f"Detalle: {e}"
+            )
+            raise
+
+        except ServerSelectionTimeoutError as e:
+            last_error = e
+            app.logger.warning(
+                f"⚠️ Intento {intento}/{max_retries}: no se pudo contactar a MongoDB Atlas "
+                "(revisa: conexión a internet de esta máquina, y en Atlas > Network Access "
+                "que la IP de esta tienda esté permitida, ej. 0.0.0.0/0 para cualquier IP). "
+                f"Detalle: {e}"
+            )
+
+        except ConnectionFailure as e:
+            last_error = e
+            app.logger.warning(
+                f"⚠️ Intento {intento}/{max_retries}: fallo de conexión a MongoDB. Detalle: {e}"
+            )
+
+        if intento < max_retries:
+            time.sleep(retry_delay_seconds)
+
+    app.logger.error(
+        "❌ No se pudo conectar a MongoDB Atlas después de varios intentos. "
+        "Checklist para esta tienda:\n"
+        "  1) ¿Hay conexión a internet en esta máquina?\n"
+        "  2) ¿La URI en el archivo .env (junto al ejecutable) es la correcta de esta tienda?\n"
+        "  3) En MongoDB Atlas > Network Access, ¿está permitida la IP de esta tienda?\n"
+        "  4) ¿El usuario/contraseña de la URI siguen siendo válidos?\n"
+        f"Último error: {last_error}"
+    )
+    raise last_error
 
 def register_blueprints(app):
     """Registrar blueprints de la aplicación"""

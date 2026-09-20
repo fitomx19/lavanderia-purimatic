@@ -28,11 +28,12 @@ class ESP32Service:
         """
         try:
             # Obtener URL del ESP32 desde DB (colección esp32_config)
-            esp32_url = self.store_repository.get_esp32_url_by_id("100")
+            # Cada máquina debe tener su propio esp32_id; no hardcodear "100".
+            esp32_url = self.store_repository.get_esp32_url_by_id(str(esp32_id))
             if not esp32_url:
                 return {
                     'success': False,
-                    'message': f'ESP32 URL no configurada para esp32_id {esp32_id}'
+                    'message': f'ESP32 URL no configurada para esp32_id {esp32_id}. Revisa la colección esp32_config.'
                 }
             
             # Preparar el mensaje en el formato que espera el microservicio
@@ -79,11 +80,11 @@ class ESP32Service:
         Envía comando para detener una máquina física
         """
         try:
-            esp32_url = self.store_repository.get_esp32_url_by_id("100")
+            esp32_url = self.store_repository.get_esp32_url_by_id(str(esp32_id))
             if not esp32_url:
                 return {
                     'success': False,
-                    'message': f'ESP32 URL no configurada para esp32_id {esp32_id}'
+                    'message': f'ESP32 URL no configurada para esp32_id {esp32_id}. Revisa la colección esp32_config.'
                 }
             
             payload = {
