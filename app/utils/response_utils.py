@@ -1,5 +1,17 @@
+from decimal import Decimal
 from flask import jsonify
 from typing import Any, Dict, Optional, List
+
+
+def _json_safe(value: Any) -> Any:
+    """Convertir Decimal (y anidados) a float para jsonify."""
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
 
 def success_response(data: Any = None, message: str = "Operación exitosa", status_code: int = 200) -> tuple:
     """
@@ -16,7 +28,7 @@ def success_response(data: Any = None, message: str = "Operación exitosa", stat
     response = {
         "success": True,
         "message": message,
-        "data": data
+        "data": _json_safe(data)
     }
     return jsonify(response), status_code
 
@@ -35,7 +47,7 @@ def error_response(message: str = "Error en la operación", status_code: int = 4
     response = {
         "success": False,
         "message": message,
-        "errors": errors or {}
+        "errors": _json_safe(errors or {})
     }
     return jsonify(response), status_code
 
@@ -58,7 +70,7 @@ def paginated_response(data: List[Any], page: int, per_page: int, total: int, me
     response = {
         "success": True,
         "message": message,
-        "data": data,
+        "data": _json_safe(data),
         "pagination": {
             "page": page,
             "per_page": per_page,

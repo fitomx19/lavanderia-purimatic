@@ -4,9 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -53,6 +51,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build
+# Builds: PyInstaller, Vite e instalador Inno (no subir .exe ni carpetas generadas)
 build/
 dist/
+dist-installer/
+**/build/
+**/dist/
+frontend/lavanderia-frontend/dist/
+frontend/lavanderia-frontend/dist-ssr/
+nfc-service/build/
+nfc-service/dist/
+*.exe
+*.spec.bak
+warn-*.txt
+xref-*.html

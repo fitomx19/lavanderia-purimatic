@@ -164,6 +164,7 @@ def write_env_file(env_path, uri, db_name):
 
     secret_key = existing.get('SECRET_KEY') or secrets.token_hex(32)
     jwt_key = existing.get('JWT_SECRET_KEY') or secrets.token_hex(32)
+    esp32_bridge = existing.get('ESP32_BRIDGE_URL') or 'http://localhost:5001'
 
     content = (
         '# Configuración de esta tienda. No compartir.\n'
@@ -174,9 +175,10 @@ def write_env_file(env_path, uri, db_name):
         f'SECRET_KEY={secret_key}\n'
         f'JWT_SECRET_KEY={jwt_key}\n'
         'JWT_ACCESS_TOKEN_EXPIRES=86400\n'
-        'CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173\n'
+        'CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000\n'
         'HOST=0.0.0.0\n'
         'PORT=5000\n'
+        f'ESP32_BRIDGE_URL={esp32_bridge}\n'
     )
     with open(env_path, 'w', encoding='utf-8') as handle:
         handle.write(content)
@@ -186,6 +188,7 @@ def write_env_file(env_path, uri, db_name):
     os.environ['SECRET_KEY'] = secret_key
     os.environ['JWT_SECRET_KEY'] = jwt_key
     os.environ['FLASK_ENV'] = 'production'
+    os.environ['ESP32_BRIDGE_URL'] = esp32_bridge
 
 
 def encode_password_hint(uri):

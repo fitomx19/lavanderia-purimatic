@@ -17,7 +17,11 @@ const LoginPage = () => {
       const response = await loginUser(username, password);
       console.log('Autenticación exitosa:', response);
       localStorage.setItem('token', response.data.token); // Guardar el token
-      navigate('/dashboard'); // Redirigir al dashboard
+      localStorage.setItem('user', JSON.stringify(response.data.user)); // Guardar datos del usuario (incluye el rol)
+
+      // Redirigir según el rol: el empleado solo tiene acceso a Ventas e Historial
+      const role = response.data.user?.role;
+      navigate(role === 'empleado' ? '/sales' : '/dashboard');
 
     } catch (err) {
       console.error('Error de autenticación:', err);

@@ -1,13 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Empaqueta la API Flask + SocketIO en un .exe que no necesita Python.
+# Empaqueta la API Flask + SocketIO + frontend React en un .exe sin Python.
 #
-# En la máquina de desarrollo (sí tiene Python):
+# En la máquina de desarrollo:
+#   cd frontend/lavanderia-frontend && npm install && npm run build
 #   pip install pyinstaller
 #   pyinstaller --noconfirm --clean purimatic.spec
 #
-# El resultado queda en dist\Purimatic\  (carpeta, no un solo archivo:
-# así Flask/SocketIO y dnspython fallan menos que en modo onefile).
+# El resultado queda en dist\Purimatic\
 
+import os
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 datas = []
@@ -43,6 +44,16 @@ for pkg in ('flask', 'flask_socketio', 'engineio', 'socketio', 'pymongo', 'dns',
 
 hiddenimports += collect_submodules('app')
 
+# Frontend React (npm run build en frontend/lavanderia-frontend)
+frontend_dist = os.path.join('frontend', 'lavanderia-frontend', 'dist')
+if os.path.isdir(frontend_dist) and os.path.isfile(os.path.join(frontend_dist, 'index.html')):
+    datas.append((frontend_dist, 'frontend'))
+else:
+    print(
+        'AVISO: no está frontend/lavanderia-frontend/dist. '
+        'Antes de pyinstaller: cd frontend/lavanderia-frontend && npm install && npm run build'
+    )
+
 a = Analysis(
     ['run.py'],
     pathex=[],
@@ -52,7 +63,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['gevent', 'geventwebsocket', 'eventlet'],
     noarchive=False,
 )
 

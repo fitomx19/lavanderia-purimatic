@@ -9,6 +9,7 @@ const DashboardPage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token'); // Eliminar el token del localStorage
+    localStorage.removeItem('user'); // Eliminar los datos del usuario
     navigate('/'); // Redirigir a la página de login
   };
 
@@ -34,6 +35,10 @@ const DashboardPage = () => {
           <div className="dashboard-card" onClick={() => navigate('/machines')}>
             <h2>Equipo</h2>
             <p>Gestionar lavadoras y secadoras</p>
+          </div>
+          <div className="dashboard-card" onClick={() => navigate('/esp32-config')}>
+            <h2>Placas ESP32</h2>
+            <p>IPs, WiFi y prueba de encendido/apagado</p>
           </div>
           <div className="dashboard-card" onClick={() => navigate('/productos')}>
             <h2>Productos</h2>

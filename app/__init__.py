@@ -1,6 +1,7 @@
 import os
+import sys
 import time
-from flask import Flask
+from flask import Flask, send_from_directory, abort, request
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -46,6 +47,9 @@ def create_app(config_class):
     
     # Registrar blueprints
     register_blueprints(app)
+
+    # Servir el frontend React (build de Vite) desde el mismo puerto 5000
+    register_frontend(app)
     
     # Configurar manejo de errores
     configure_error_handlers(app)
@@ -62,11 +66,20 @@ def init_extensions(app):
     # Configurar JWT
     jwt = JWTManager(app)
     
-    # Configurar CORS
-    CORS(app, origins=app.config['CORS_ORIGINS'])
+    # En el .exe el front y la API son el mismo origen. Aun así hay que
+    # permitir localhost vs 127.0.0.1 y Vite en desarrollo.
+    cors_origins = app.config['CORS_ORIGINS']
+    if getattr(sys, 'frozen', False):
+        cors_origins = '*'
+    CORS(app, origins=cors_origins)
     
-    # Inicializar Flask-SocketIO
-    socketio = SocketIO(app, cors_allowed_origins=app.config['CORS_ORIGINS'])
+    # Forzar threading: en el .exe PyInstaller mete gevent y SocketIO lo elige solo.
+    # gevent no acepta allow_unsafe_werkzeug (rompe cada request).
+    socketio = SocketIO(
+        app,
+        cors_allowed_origins=cors_origins,
+        async_mode='threading',
+    )
     
     # Configurar JWT callbacks
     @jwt.token_in_blocklist_loader
@@ -113,15 +126,8 @@ def init_database(app, max_retries=3, retry_delay_seconds=3):
             # Probar la conexión de verdad (MongoClient() es "perezoso")
             mongo_client.admin.command('ping')
 
-            # Atlas a veces llega sin nombre de base en la URI
-            # (mongodb+srv://...mongodb.net/?retryWrites=true). En ese caso
-            # el split tradicional deja el nombre vacío y la app "conecta"
-            # a una BD que no es la de la tienda.
-            from urllib.parse import urlparse
-            parsed = urlparse(mongo_uri)
-            db_name = (parsed.path or '').lstrip('/').split('?')[0]
-            if not db_name:
-                db_name = os.environ.get('MONGODB_DB_NAME', 'lavanderia_purimatic')
+            # Obtener nombre de la base de datos desde la URI
+            db_name = mongo_uri.split('/')[-1].split('?')[0]
             db = mongo_client[db_name]
 
             app.logger.info(f"Conectado exitosamente a MongoDB: {db_name}")
@@ -190,6 +196,7 @@ def register_blueprints(app):
     from app.routes.card_routes import card_bp
     from app.routes.service_cycle_routes import service_cycle_bp
     from app.routes.sale_routes import sale_bp
+    from app.routes.esp32_config_routes import esp32_config_bp
     
     # Registrar blueprints existentes
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -203,6 +210,71 @@ def register_blueprints(app):
     app.register_blueprint(card_bp, url_prefix='/api')
     app.register_blueprint(service_cycle_bp, url_prefix='/api')
     app.register_blueprint(sale_bp, url_prefix='/api')
+    app.register_blueprint(esp32_config_bp, url_prefix='/api')
+
+def get_frontend_dist_dir():
+    """Carpeta con index.html del frontend (Vite dist)."""
+    if getattr(sys, 'frozen', False):
+        meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+        candidates = [
+            os.path.join(meipass, 'frontend'),
+            os.path.join(os.path.dirname(sys.executable), 'frontend'),
+        ]
+    else:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        candidates = [
+            os.path.join(project_root, 'frontend', 'lavanderia-frontend', 'dist'),
+        ]
+
+    for path in candidates:
+        if os.path.isfile(os.path.join(path, 'index.html')):
+            return path
+    return None
+
+
+def register_frontend(app):
+    """Sirve la SPA en / para que la tienda no necesite Node ni puerto 5173."""
+    dist = get_frontend_dist_dir()
+    app.config['FRONTEND_DIST'] = dist
+
+    if not dist:
+        app.logger.warning(
+            "Frontend no encontrado. En desarrollo usa npm run dev (puerto 5173). "
+            "Para el instalador: cd frontend/lavanderia-frontend && npm run build"
+        )
+
+        @app.route('/')
+        def frontend_missing():
+            return (
+                '<html><body style="font-family:Segoe UI,sans-serif;padding:2rem">'
+                '<h1>Purimatic API lista</h1>'
+                '<p>La API corre en este puerto, pero el frontend no está empaquetado.</p>'
+                '<p>En desarrollo abre <a href="http://localhost:5173">http://localhost:5173</a> '
+                '(<code>npm run dev</code> en frontend/lavanderia-frontend).</p>'
+                '<p>Para el .exe: <code>npm run build</code> y luego PyInstaller.</p>'
+                '</body></html>'
+            ), 200
+        return
+
+    app.logger.info(f"Frontend servido desde {dist}")
+
+    @app.route('/', defaults={'asset_path': ''})
+    @app.route('/<path:asset_path>')
+    def serve_spa(asset_path):
+        first = (asset_path or '').split('/', 1)[0]
+        if first in {
+            'auth', 'employees', 'clients', 'products', 'washers',
+            'dryers', 'api', 'socket.io',
+        }:
+            abort(404)
+
+        if asset_path:
+            safe_dist = os.path.normpath(dist)
+            target = os.path.normpath(os.path.join(dist, asset_path))
+            if target.startswith(safe_dist) and os.path.isfile(target):
+                return send_from_directory(dist, asset_path)
+
+        return send_from_directory(dist, 'index.html')
 
 def configure_error_handlers(app):
     """Configurar manejadores de errores"""
@@ -211,6 +283,11 @@ def configure_error_handlers(app):
     
     @app.errorhandler(404)
     def not_found(error):
+        dist = app.config.get('FRONTEND_DIST')
+        if dist and request.method == 'GET':
+            accept = request.headers.get('Accept', '')
+            if 'text/html' in accept:
+                return send_from_directory(dist, 'index.html')
         return error_response('Recurso no encontrado', 404)
     
     @app.errorhandler(500)

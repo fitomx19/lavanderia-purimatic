@@ -10,6 +10,7 @@ from .dryer_routes import dryer_bp
 from .card_routes import card_bp
 from .service_cycle_routes import service_cycle_bp
 from .sale_routes import sale_bp
+from .esp32_config_routes import esp32_config_bp
 
 __all__ = [
     # Rutas existentes
@@ -23,5 +24,6 @@ __all__ = [
     # Rutas nuevas (Segunda Fase)
     'card_bp',
     'service_cycle_bp',
-    'sale_bp'
+    'sale_bp',
+    'esp32_config_bp',
 ]

@@ -59,6 +59,13 @@ from .sale_schema import (
     sales_response_schema
 )
 
+from .esp32_config_schema import (
+    esp32_config_schema,
+    esp32_config_update_schema,
+    esp32_config_response_schema,
+    esp32_configs_response_schema,
+)
+
 __all__ = [
     # Schemas existentes
     'user_client_schema',
@@ -97,5 +104,9 @@ __all__ = [
     'sale_schema',
     'sale_update_schema',
     'sale_response_schema',
-    'sales_response_schema'
+    'sales_response_schema',
+    'esp32_config_schema',
+    'esp32_config_update_schema',
+    'esp32_config_response_schema',
+    'esp32_configs_response_schema',
 ]

@@ -19,6 +19,7 @@ const MachinePages = () => {
     numero: '',
     store_id: 'store_001',
     estado: 'disponible',
+    esp32_id: '',
   });
   
   const [dryerFormData, setDryerFormData] = useState({
@@ -27,6 +28,7 @@ const MachinePages = () => {
     numero: '',
     store_id: 'store_001',
     estado: 'disponible',
+    esp32_id: '',
   });
 
   const STORE_ID = 'store_001';
@@ -59,16 +61,22 @@ const MachinePages = () => {
     setDryerFormData({ ...dryerFormData, [name]: value });
   };
 
+  const withEsp32Id = (data) => ({
+    ...data,
+    esp32_id: (data.esp32_id || '').trim() || null,
+  });
+
   const handleCreateWasher = async (e) => {
     e.preventDefault();
     try {
-      await createWasher(washerFormData);
+      await createWasher(withEsp32Id(washerFormData));
       setWasherFormData({
         marca: '',
         capacidad: '',
         numero: '',
         store_id: 'store_001',
         estado: 'disponible',
+        esp32_id: '',
       });
       setShowAddForm(false);
       fetchMachines();
@@ -80,13 +88,14 @@ const MachinePages = () => {
   const handleCreateDryer = async (e) => {
     e.preventDefault();
     try {
-      await createDryer(dryerFormData);
+      await createDryer(withEsp32Id(dryerFormData));
       setDryerFormData({
         marca: '',
         capacidad: '',
         numero: '',
         store_id: 'store_001',
         estado: 'disponible',
+        esp32_id: '',
       });
       setShowAddForm(false);
       fetchMachines();
@@ -98,7 +107,7 @@ const MachinePages = () => {
   const handleUpdateWasher = async (e, id) => {
     e.preventDefault();
     try {
-      await updateWasher(id, editingMachine);
+      await updateWasher(id, withEsp32Id(editingMachine));
       setEditingMachine(null);
       fetchMachines();
     } catch (err) {
@@ -109,7 +118,7 @@ const MachinePages = () => {
   const handleUpdateDryer = async (e, id) => {
     e.preventDefault();
     try {
-      await updateDryer(id, editingMachine);
+      await updateDryer(id, withEsp32Id(editingMachine));
       setEditingMachine(null);
       fetchMachines();
     } catch (err) {
@@ -232,6 +241,10 @@ const MachinePages = () => {
                       <span className="detail-label">Capacidad:</span>
                       <span className="detail-value">{washer.capacidad} kg</span>
                     </div>
+                    <div className="detail-item">
+                      <span className="detail-label">ESP32:</span>
+                      <span className="detail-value">{washer.esp32_id || 'sin placa'}</span>
+                    </div>
                   </div>
                   
                   {editingMachine?._id === washer._id ? (
@@ -265,6 +278,14 @@ const MachinePages = () => {
                           <option value="ocupada">Ocupada</option>
                           <option value="mantenimiento">Mantenimiento</option>
                         </select>
+                      </div>
+                      <div className="form-row">
+                        <input 
+                          type="text" 
+                          placeholder="esp32_id (ej. 76)"
+                          value={editingMachine.esp32_id || ''} 
+                          onChange={(e) => setEditingMachine({ ...editingMachine, esp32_id: e.target.value })} 
+                        />
                       </div>
                       <div className="form-actions">
                         <button type="submit" className="save-btn">💾 Guardar</button>
@@ -325,6 +346,10 @@ const MachinePages = () => {
                       <span className="detail-label">Capacidad:</span>
                       <span className="detail-value">{dryer.capacidad} kg</span>
                     </div>
+                    <div className="detail-item">
+                      <span className="detail-label">ESP32:</span>
+                      <span className="detail-value">{dryer.esp32_id || 'sin placa'}</span>
+                    </div>
                   </div>
                   
                   {editingMachine?._id === dryer._id ? (
@@ -358,6 +383,14 @@ const MachinePages = () => {
                           <option value="ocupada">Ocupada</option>
                           <option value="mantenimiento">Mantenimiento</option>
                         </select>
+                      </div>
+                      <div className="form-row">
+                        <input 
+                          type="text" 
+                          placeholder="esp32_id (ej. 76)"
+                          value={editingMachine.esp32_id || ''} 
+                          onChange={(e) => setEditingMachine({ ...editingMachine, esp32_id: e.target.value })} 
+                        />
                       </div>
                       <div className="form-actions">
                         <button type="submit" className="save-btn">💾 Guardar</button>
@@ -449,6 +482,15 @@ const MachinePages = () => {
                     <option value="ocupada">Ocupada</option>
                     <option value="mantenimiento">Mantenimiento</option>
                   </select>
+                </div>
+                <div className="form-row">
+                  <input 
+                    type="text" 
+                    name="esp32_id" 
+                    placeholder="esp32_id (el mismo de Placas ESP32)"
+                    value={addFormType === 'washer' ? washerFormData.esp32_id : dryerFormData.esp32_id}
+                    onChange={addFormType === 'washer' ? handleWasherChange : handleDryerChange}
+                  />
                 </div>
                 <div className="form-actions">
                   <button type="submit" className="save-btn">💾 Crear {addFormType === 'washer' ? 'Lavadora' : 'Secadora'}</button>

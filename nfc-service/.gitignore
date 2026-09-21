@@ -4,9 +4,13 @@ __pycache__/
 *$py.class
 *.so
 .Python
+# PyInstaller (el .exe y las carpetas no van a git)
 build/
-develop-eggs/
 dist/
+*.exe
+warn-*.txt
+xref-*.html
+
 downloads/
 eggs/
 .eggs/

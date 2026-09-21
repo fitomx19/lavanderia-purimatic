@@ -70,7 +70,7 @@ class DryerResponseSchema(Schema):
     _id = fields.Str()
     numero = fields.Integer()
     marca = fields.Str()
-    capacidad = fields.Decimal(places=1)
+    capacidad = fields.Float()
     estado = fields.Str()
     store_id = fields.Str()
     esp32_id = fields.Str(allow_none=True)

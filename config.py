@@ -27,26 +27,16 @@ def get_app_config_dir():
 # solo tenga que editar su propio archivo .env con su URI de MongoDB Atlas.
 APP_CONFIG_DIR = get_app_config_dir()
 ENV_FILE_PATH = os.path.join(APP_CONFIG_DIR, '.env')
-
-
-def load_store_env(override=True):
-    """Recargar el .env de esta tienda (útil después del asistente de instalación)."""
-    if os.path.exists(ENV_FILE_PATH):
-        load_dotenv(dotenv_path=ENV_FILE_PATH, override=override)
-        return True
-    return False
-
-
-load_store_env(override=False)
+load_dotenv(dotenv_path=ENV_FILE_PATH)
 
 # Si el .env no existe todavía (primer arranque en una máquina nueva),
-# se avisa por consola. El asistente de primer arranque (setup_wizard)
-# se encarga de crearlo antes de iniciar Flask cuando se lanza el .exe.
+# se avisa por consola para que se note de inmediato, en vez de fallar
+# silenciosamente y conectar a un localhost que no existe en esa tienda.
 if not os.path.exists(ENV_FILE_PATH):
     print(
         f"⚠️  No se encontró archivo de configuración en: {ENV_FILE_PATH}\n"
-        f"   En el primer arranque del instalador se abrirá un asistente "
-        f"para pegar la URI de MongoDB Atlas de esta tienda."
+        f"   Se usarán valores por defecto (MongoDB local). "
+        f"Crea un archivo .env junto al ejecutable con la URI de MongoDB Atlas de esta tienda."
     )
 
 
@@ -63,9 +53,15 @@ class Config:
     
     # Configuración de MongoDB
     MONGODB_URI = os.environ.get('MONGODB_URI') or 'mongodb://localhost:27017/lavanderia_db'
+
+    # Puente NFC + ESP32 (nfc-service). En la tienda corre en localhost:5001.
+    ESP32_BRIDGE_URL = os.environ.get('ESP32_BRIDGE_URL', 'http://localhost:5001').rstrip('/')
     
     # Configuración de CORS
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+    CORS_ORIGINS = os.environ.get(
+        'CORS_ORIGINS',
+        'http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000',
+    ).split(',')
     
     # Configuración de la aplicación
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
@@ -96,19 +92,6 @@ config_by_name = {
 }
 
 def get_config():
-    """Obtener configuración según el entorno, leyendo el .env actual de la tienda."""
-    load_store_env(override=True)
+    """Obtener configuración según el entorno"""
     config_name = os.environ.get('FLASK_ENV', 'development')
-    if getattr(sys, 'frozen', False):
-        config_name = 'production'
-    config_class = config_by_name.get(config_name, DevelopmentConfig)
-    # Releer campos que dependen del .env por si el asistente acaba de escribirlos
-    config_class.MONGODB_URI = os.environ.get('MONGODB_URI') or config_class.MONGODB_URI
-    config_class.SECRET_KEY = os.environ.get('SECRET_KEY') or config_class.SECRET_KEY
-    config_class.JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or config_class.JWT_SECRET_KEY
-    config_class.FLASK_ENV = config_name
-    config_class.DEBUG = config_name == 'development'
-    cors = os.environ.get('CORS_ORIGINS')
-    if cors:
-        config_class.CORS_ORIGINS = cors.split(',')
-    return config_class
+    return config_by_name.get(config_name, DevelopmentConfig)

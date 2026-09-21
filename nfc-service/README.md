@@ -116,9 +116,27 @@ POST /test-connection
 POST /reset-reader
 ```
 
-#### 🔍 Diagnóstico Completo (NUEVO)
+#### Diagnóstico Completo
 ```bash
 GET /diagnostics
+```
+
+#### Puente ESP32 (prender/apagar máquinas)
+La API principal (puerto 5000) llama a este endpoint. No hace falta llamarlo a mano salvo para pruebas.
+
+```bash
+POST /send-to-esp32
+Content-Type: application/json
+
+{
+  "esp32_url": "http://192.168.1.76/laundry-update",
+  "laundry_data": {
+    "washer_id": "76",
+    "status": "starting",
+    "start_time": "2026-09-20T16:00:00",
+    "end_time": "2026-09-20T16:30:00"
+  }
+}
 ```
 
 ## 📋 Ejemplos de Respuesta

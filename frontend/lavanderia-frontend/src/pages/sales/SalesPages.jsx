@@ -8,13 +8,13 @@ import NFCPaymentModal from '../../components/NFCPaymentModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../../services/apiConfig';
 import NewSaleWizard from './components/NewSaleWizard';
 import PendingActivations from './components/PendingActivations';
 import MachineBoard from './components/MachineBoard';
 import SalesQueue, { isSaleReadyToClose } from './components/SalesQueue';
 import './SalesPages.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const STORE_ID = '65239f60a92d4f5f5f5f5f5f';
 
 const SalesPage = () => {
@@ -160,7 +160,7 @@ const SalesPage = () => {
 
   useEffect(() => {
     if (!socketRef.current) {
-      socketRef.current = io(API_BASE_URL, {
+      socketRef.current = io(API_BASE_URL || undefined, {
         autoConnect: true,
         reconnection: true,
         reconnectionDelay: 1000,

@@ -1,0 +1,139 @@
+.esp32-layout {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 1rem;
+}
+
+.esp32-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.esp32-content h1 {
+  margin: 0 0 0.5rem;
+  color: #2c3e50;
+}
+
+.esp32-help {
+  color: #555;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.esp32-form {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.esp32-form input {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.esp32-form button,
+.esp32-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.esp32-save-btn {
+  background: #198754;
+  color: #fff;
+}
+
+.esp32-start-btn {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.esp32-stop-btn {
+  background: #6c757d;
+  color: #fff;
+}
+
+.esp32-off-btn {
+  background: #dc3545;
+  color: #fff;
+}
+
+.esp32-message {
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.esp32-message.ok {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.esp32-message.err {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.esp32-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.esp32-table th,
+.esp32-table td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.esp32-table th {
+  background: #f1f3f5;
+}
+
+.esp32-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.esp32-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.esp32-badge.on {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.esp32-badge.off {
+  background: #e2e3e5;
+  color: #41464b;
+}
+
+.esp32-url-input {
+  width: 100%;
+  min-width: 220px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+}
+
+@media (max-width: 800px) {
+  .esp32-form {
+    grid-template-columns: 1fr;
+  }
+}

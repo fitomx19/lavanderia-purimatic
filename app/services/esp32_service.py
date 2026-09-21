@@ -1,20 +1,20 @@
+import os
 import requests
 import logging
-from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from app.repositories.store_repository import StoreRepository
 
 logger = logging.getLogger(__name__)
 
 class ESP32Service:
     """
-    Este servicio es como un 'cartero' que sabe cómo hablar 
-    con el microservicio ESP32
+    Este servicio es como un 'cartero' que sabe cómo hablar
+    con el puente ESP32 (nfc-service, puerto 5001).
     """
     
     def __init__(self):
-        # URL del microservicio ESP32 que actúa como intermediario
-        self.base_url = "http://localhost:5002"
+        # URL del microservicio NFC/ESP32 que actúa como intermediario
+        self.base_url = os.environ.get('ESP32_BRIDGE_URL', 'http://localhost:5001').rstrip('/')
         self.timeout = 10
         self.store_repository = StoreRepository()
     
@@ -47,9 +47,9 @@ class ESP32Service:
                 }
             }
             
-            logger.info(f"Enviando comando de inicio a ESP32 {esp32_id}")
+            logger.info(f"Enviando comando de inicio a ESP32 {esp32_id} vía {self.base_url}")
             
-            # Enviar la petición al microservicio ESP32 (puerto 5002)
+            # Enviar la petición al puente NFC/ESP32 (puerto 5001)
             response = requests.post(
                 f"{self.base_url}/send-to-esp32",
                 json=payload,
