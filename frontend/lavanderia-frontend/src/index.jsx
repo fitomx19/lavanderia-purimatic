@@ -11,6 +11,11 @@ import ServicesPages from './pages/CycleServices/ServicesPages'; // Importar Ser
 import SalesPage from './pages/sales/SalesPages'; // Importar SalesPage
 import TransactionsPage from './pages/transactions/TransactionsPage'; // Importar TransactionsPage
 import Esp32ConfigPage from './pages/esp32/Esp32ConfigPage';
+import TicketSettingsPage from './pages/ticket/TicketSettingsPage';
+import EncargosPage from './pages/encargos/EncargosPage';
+import EncargosPreciosPage from './pages/encargos/EncargosPreciosPage';
+import CardBenefitsPage from './pages/card-benefits/CardBenefitsPage';
+import RecargasPage from './pages/recargas/RecargasPage';
 import './index.css'; // Importar los estilos globales
 
 // Obtiene el usuario guardado en localStorage tras iniciar sesión (incluye el rol)
@@ -97,6 +102,38 @@ root.render(
           }
         />
         <Route
+          path="/ticket-settings"
+          element={
+            <RequireRole allowedRoles={['admin']}>
+              <TicketSettingsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/encargos"
+          element={
+            <RequireRole allowedRoles={['admin', 'empleado']}>
+              <EncargosPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/encargos-precios"
+          element={
+            <RequireRole allowedRoles={['admin']}>
+              <EncargosPreciosPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/card-benefits"
+          element={
+            <RequireRole allowedRoles={['admin']}>
+              <CardBenefitsPage />
+            </RequireRole>
+          }
+        />
+        <Route
           path="/productos"
           element={
             <RequireRole allowedRoles={['admin']}>
@@ -119,6 +156,14 @@ root.render(
           element={
             <RequireRole allowedRoles={['admin', 'empleado']}>
               <SalesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/recargas"
+          element={
+            <RequireRole allowedRoles={['admin', 'empleado']}>
+              <RecargasPage />
             </RequireRole>
           }
         />

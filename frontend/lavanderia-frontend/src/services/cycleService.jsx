@@ -58,6 +58,25 @@ export const createServiceCycle = async (cycleData) => {
   }
 };
 
+export const updateServiceCycle = async (id, cycleData) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(
+      `${API_BASE_URL}/api/service-cycles`,
+      { ...cycleData, _id: id },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al actualizar ciclo de servicio');
+  }
+};
+
 export const deleteServiceCycle = async (id) => {
   try {
     const token = getToken();

@@ -197,6 +197,9 @@ def register_blueprints(app):
     from app.routes.service_cycle_routes import service_cycle_bp
     from app.routes.sale_routes import sale_bp
     from app.routes.esp32_config_routes import esp32_config_bp
+    from app.routes.ticket_settings_routes import ticket_settings_bp
+    from app.routes.encargo_routes import encargo_bp
+    from app.routes.card_benefits_routes import card_benefits_bp
     
     # Registrar blueprints existentes
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -211,6 +214,9 @@ def register_blueprints(app):
     app.register_blueprint(service_cycle_bp, url_prefix='/api')
     app.register_blueprint(sale_bp, url_prefix='/api')
     app.register_blueprint(esp32_config_bp, url_prefix='/api')
+    app.register_blueprint(ticket_settings_bp, url_prefix='/api')
+    app.register_blueprint(encargo_bp, url_prefix='/api')
+    app.register_blueprint(card_benefits_bp, url_prefix='/api')
 
 def get_frontend_dist_dir():
     """Carpeta con index.html del frontend (Vite dist)."""

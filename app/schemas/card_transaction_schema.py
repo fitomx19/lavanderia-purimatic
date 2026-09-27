@@ -10,6 +10,7 @@ class CardTransactionSchema(Schema):
         validate=validate.OneOf([
             'recarga_manual',
             'recarga_nfc',
+            'recarga_venta',
             'pago_venta',
             'transferencia_out',
             'transferencia_in',

@@ -67,6 +67,21 @@ export const createClient = async (clientData) => {
   }
 };
 
+export const searchClients = async (q, page = 1, per_page = 10) => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_BASE_URL}/clients/search`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: { q, page, per_page },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error al buscar clientes');
+  }
+};
+
 export const deleteClient = async (id) => {
   try {
     const token = getToken();

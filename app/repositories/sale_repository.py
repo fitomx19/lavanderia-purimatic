@@ -356,10 +356,28 @@ class SaleRepository(BaseRepository):
             IndexModel([('completed_at', DESCENDING)]),
             IndexModel([('items.services.status', ASCENDING)]),
             IndexModel([('items.services.machine_id', ASCENDING)]),
-            IndexModel([('finalized_at', DESCENDING)]) # Nuevo índice
+            IndexModel([('finalized_at', DESCENDING)]),
+            IndexModel([('folio', ASCENDING)], unique=True, sparse=True),
         ]
         
         self.collection.create_indexes(indexes)
+
+    def next_folio(self) -> str:
+        """
+        Generar folio secuencial mensual: YYYYMM-NNNN (ej. 202609-0001).
+        """
+        from pymongo import ReturnDocument
+
+        period = datetime.utcnow().strftime('%Y%m')
+        counters = self.db['sale_counters']
+        result = counters.find_one_and_update(
+            {'_id': period},
+            {'$inc': {'seq': 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        seq = int((result or {}).get('seq') or 1)
+        return f'{period}-{seq:04d}'
 
     def get_sale_services_status(self, sale_id: str) -> Dict[str, Any]:
         """

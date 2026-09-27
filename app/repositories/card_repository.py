@@ -64,18 +64,22 @@ class CardRepository(BaseRepository):
         """
         return self.find_one({'card_number': card_number, 'is_active': True})
     
-    def find_by_client_id(self, client_id: str) -> list:
+    def find_by_client_id(self, client_id: str, include_inactive: bool = False) -> list:
         """
         Encontrar todas las tarjetas de un cliente
         
         Args:
             client_id: ID del cliente
+            include_inactive: Si True, incluye tarjetas inactivas
             
         Returns:
             list: Lista de tarjetas del cliente
         """
+        filter_criteria = {'client_id': client_id}
+        if not include_inactive:
+            filter_criteria['is_active'] = True
         result = self.find_many(
-            filter_criteria={'client_id': client_id, 'is_active': True},
+            filter_criteria=filter_criteria,
             per_page=100
         )
         return result['documents']
@@ -109,7 +113,7 @@ class CardRepository(BaseRepository):
             new_balance = max(0, current_balance - amount)
         
         # Validar límites
-        if new_balance > 1000:
+        if new_balance > 10000:
             return None
         
         # Registrar transacción ANTES de actualizar saldo
@@ -168,7 +172,7 @@ class CardRepository(BaseRepository):
         
         # Verificar límite de tarjeta destino
         to_balance = float(to_card.get('balance', 0))
-        if to_balance + amount > 1000:
+        if to_balance + amount > 10000:
             return {'success': False, 'message': 'La transferencia excedería el límite de la tarjeta destino'}
         
         # Registrar transacciones para ambas tarjetas

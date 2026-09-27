@@ -39,8 +39,15 @@ def create_sale(current_user):
         if result['success']:
             # Emitir evento WebSocket para notificar nueva venta
             socketio.emit('new_sale', result['data'])
+            response_data = result['data']
+            if isinstance(response_data, dict):
+                response_data = {
+                    **response_data,
+                    'ticket_printed': result.get('ticket_printed'),
+                    'ticket_message': result.get('ticket_message'),
+                }
             return success_response(
-                data=result['data'],
+                data=response_data,
                 message=result['message'],
                 status_code=201
             )
@@ -52,6 +59,47 @@ def create_sale(current_user):
             )
             
     except Exception as e:
+        return error_response('Error interno del servidor', 500)
+
+
+@sale_bp.route('/sales/reload', methods=['POST'])
+@employee_required
+def create_reload_sale(current_user):
+    """
+    Cobrar recarga de tarjeta y acreditar saldo.
+    POST /api/sales/reload
+    """
+    try:
+        if not request.is_json or not request.get_json():
+            return error_response('Datos JSON requeridos', 400)
+
+        data = request.get_json()
+        if 'employee_id' not in data:
+            data['employee_id'] = current_user['_id']
+
+        result = sale_service.create_reload_sale(data)
+        if result['success']:
+            socketio.emit('new_sale', result.get('data'))
+            response_data = result.get('data') or {}
+            if isinstance(response_data, dict):
+                response_data = {
+                    **response_data,
+                    'ticket_printed': result.get('ticket_printed'),
+                    'ticket_message': result.get('ticket_message'),
+                    'card_balance': result.get('card_balance'),
+                }
+            return success_response(
+                data=response_data,
+                message=result['message'],
+                status_code=201,
+            )
+        return error_response(
+            message=result.get('message') or 'Error en recarga',
+            errors=result.get('errors'),
+            status_code=400,
+        )
+    except Exception as e:
+        logger.error(f"Error en create_reload_sale route: {e}")
         return error_response('Error interno del servidor', 500)
 
 @sale_bp.route('/sales', methods=['GET'])
@@ -480,6 +528,7 @@ def get_all_sales(current_user):
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         payment_type = request.args.get('payment_type')
+        folio = request.args.get('folio')
         
         result = sale_service.get_all_sales_filtered(
             page=page,
@@ -488,7 +537,8 @@ def get_all_sales(current_user):
             employee_id=employee_id,
             start_date=start_date,
             end_date=end_date,
-            payment_type=payment_type
+            payment_type=payment_type,
+            folio=folio,
         )
         
         if result['success']:

@@ -1,5 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import './NewSaleWizard.css';
+import {
+  getCardBenefitsSettings,
+  resolvePayDiscountStyle,
+} from '../../../services/cardBenefitsService';
 
 const PAYMENT_TYPES = [
   { id: 'efectivo', label: 'Efectivo', icon: '💵' },
@@ -51,10 +55,23 @@ const NewSaleWizard = ({
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [cashReceived, setCashReceived] = useState({});
   const [showSplitPayment, setShowSplitPayment] = useState(false);
+  const [cardBenefits, setCardBenefits] = useState(null);
+
+  useEffect(() => {
+    getCardBenefitsSettings()
+      .then((res) => setCardBenefits(res.data || null))
+      .catch(() => setCardBenefits(null));
+  }, []);
 
   const hasItems =
     Object.values(productQty).some(q => q > 0) || serviceSelections.length > 0;
   const hasServices = serviceSelections.length > 0;
+
+  const usesCardPay = paymentMethods.some(
+    (pm) => pm.payment_type === 'tarjeta_recargable'
+  );
+  const payStyle = usesCardPay ? resolvePayDiscountStyle(cardBenefits) : null;
+  const payPercent = Number(cardBenefits?.pay_discount_percent) || 0;
 
   const paidTotal = useMemo(
     () => paymentMethods.reduce((sum, pm) => sum + (Number(pm.amount) || 0), 0),
@@ -74,6 +91,8 @@ const NewSaleWizard = ({
         duration_minutes: cycle.duration_minutes,
         price: cycle.price,
         price_per_kg: cycle.price_per_kg,
+        price_tarjeta: cycle.price_tarjeta,
+        price_per_kg_tarjeta: cycle.price_per_kg_tarjeta,
         allowed_machines: (cycle.allowed_machines || []).map(am => am._id || am)
       }
     ]);
@@ -111,16 +130,28 @@ const NewSaleWizard = ({
         lines.push({
           key: `p-${id}`,
           label: `${p.nombre} × ${qty}`,
-          amount: Number(p.precio) * qty
+          amount: Number(p.precio) * qty,
+          original: Number(p.precio) * qty,
         });
       }
     });
     serviceSelections.forEach(svc => {
-      let amount = 0;
+      let original = 0;
       if (svc.service_type === 'encargo_lavado') {
-        amount = Number(svc.price_per_kg || 0) * Number(svc.weight_kg || 0);
+        original = Number(svc.price_per_kg || 0) * Number(svc.weight_kg || 0);
       } else {
-        amount = Number(svc.price || 0);
+        original = Number(svc.price || 0);
+      }
+      let amount = original;
+      if (payStyle === 'porcentaje' && payPercent > 0) {
+        amount = Math.round(original * (1 - payPercent / 100) * 100) / 100;
+      } else if (payStyle === 'precio_ciclo') {
+        if (svc.service_type === 'encargo_lavado' && svc.price_per_kg_tarjeta != null) {
+          amount =
+            Number(svc.price_per_kg_tarjeta) * Number(svc.weight_kg || 0);
+        } else if (svc.service_type !== 'encargo_lavado' && svc.price_tarjeta != null) {
+          amount = Number(svc.price_tarjeta);
+        }
       }
       const machine = machines.find(m => m._id === svc.machine_id);
       const machinePart = machine ? ` · #${machine.numero}` : '';
@@ -131,14 +162,24 @@ const NewSaleWizard = ({
       lines.push({
         key: svc.localId,
         label: `${svc.name}${kgPart}${machinePart}`,
-        amount
+        amount,
+        original,
       });
     });
     return lines;
-  }, [productQty, products, serviceSelections, machines]);
+  }, [productQty, products, serviceSelections, machines, payStyle, payPercent]);
 
   const computedTotal = useMemo(
     () => ticketLines.reduce((s, l) => s + l.amount, 0),
+    [ticketLines]
+  );
+
+  const savingsTotal = useMemo(
+    () =>
+      ticketLines.reduce(
+        (s, l) => s + Math.max(0, (l.original || l.amount) - l.amount),
+        0
+      ),
     [ticketLines]
   );
 
@@ -169,47 +210,106 @@ const NewSaleWizard = ({
     setShowSplitPayment(false);
   };
 
+  /** Al dividir: limpia montos. Fuera de dividir: un solo método lleva el total. */
   const addPayment = (type) => {
-    const rem = Math.max(0, Number((computedTotal - paidTotal).toFixed(2)));
-    const amount = rem > 0 ? rem : (computedTotal > 0 ? computedTotal : 0);
-    setPaymentMethods(prev => [
-      ...prev,
-      {
-        localId: `pay-${Date.now()}`,
-        payment_type: type,
-        amount,
-        card_id: '',
-        nfc_uid: '',
-        validated: false
+    setPaymentMethods((prev) => {
+      // Primer método extra → entra a modo dividido: limpia cantidades
+      if (prev.length <= 1) {
+        const first = prev[0]
+          ? {
+              ...prev[0],
+              amount: 0,
+              card_id: '',
+              nfc_uid: '',
+              validated: false
+            }
+          : {
+              localId: `pay-${Date.now()}`,
+              payment_type: 'efectivo',
+              amount: 0,
+              card_id: '',
+              nfc_uid: '',
+              validated: false
+            };
+        return [
+          first,
+          {
+            localId: `pay-${Date.now()}-2`,
+            payment_type: type,
+            amount: 0,
+            card_id: '',
+            nfc_uid: '',
+            validated: false
+          }
+        ];
       }
-    ]);
+      return [
+        ...prev,
+        {
+          localId: `pay-${Date.now()}`,
+          payment_type: type,
+          amount: 0,
+          card_id: '',
+          nfc_uid: '',
+          validated: false
+        }
+      ];
+    });
     setShowSplitPayment(false);
   };
 
   useEffect(() => {
-    if (step === 3 && paymentMethods.length === 0 && computedTotal > 0) {
+    if (step !== 3 || computedTotal <= 0) return;
+    // Por defecto: todo en efectivo (primer método)
+    if (paymentMethods.length === 0) {
       setPrimaryPayment('efectivo');
     }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, computedTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (step !== 3) return;
+    // Solo con un método: el monto sigue el total automáticamente
     if (paymentMethods.length !== 1) return;
     const only = paymentMethods[0];
     if (only.validated) return;
     const nextAmount = Number(computedTotal.toFixed(2));
     if (Number(only.amount) === nextAmount) return;
-    setPaymentMethods(prev =>
-      prev.map(pm => (pm.localId === only.localId ? { ...pm, amount: nextAmount } : pm))
+    setPaymentMethods((prev) =>
+      prev.map((pm) =>
+        pm.localId === only.localId ? { ...pm, amount: nextAmount } : pm
+      )
     );
-  }, [computedTotal, step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [computedTotal, step, paymentMethods.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removePayment = (localId) => {
-    setPaymentMethods(prev => prev.filter(pm => pm.localId !== localId));
-    setCashReceived(prev => {
+    setPaymentMethods((prev) => {
+      const next = prev.filter((pm) => pm.localId !== localId);
+      // Al volver a un solo método, restaura el total completo
+      if (next.length === 1) {
+        return [
+          {
+            ...next[0],
+            amount: Number(computedTotal.toFixed(2)),
+            card_id: '',
+            nfc_uid: '',
+            validated: false
+          }
+        ];
+      }
+      return next;
+    });
+    setCashReceived((prev) => {
       const { [localId]: _, ...rest } = prev;
       return rest;
     });
+  };
+
+  const cancelSplitPayment = () => {
+    if (paymentMethods.length > 1) {
+      setPrimaryPayment(paymentMethods[0]?.payment_type || 'efectivo');
+      return;
+    }
+    setShowSplitPayment(false);
   };
 
   const updatePaymentAmount = (localId, amount) => {
@@ -293,6 +393,8 @@ const NewSaleWizard = ({
 
   const goBack = () => {
     if (step === 3) {
+      // Al salir de pagar, vuelve a dejar listo el default (efectivo = total)
+      setPrimaryPayment('efectivo');
       setStep(hasServices ? 2 : 1);
       return;
     }
@@ -616,6 +718,11 @@ const NewSaleWizard = ({
       {step === 3 && (
         <div className="wizard-body">
           <div className="pay-total-huge">${computedTotal.toFixed(2)}</div>
+          {savingsTotal > 0.009 && (
+            <p style={{ textAlign: 'center', color: '#0f5132', marginTop: 0 }}>
+              Ahorro con tarjeta: ${savingsTotal.toFixed(2)}
+            </p>
+          )}
 
           <div className="pay-type-row">
             {PAYMENT_TYPES.map(pt => (
@@ -754,12 +861,33 @@ const NewSaleWizard = ({
           <button
             type="button"
             className="add-payment-link"
-            onClick={() => setShowSplitPayment(prev => !prev)}
+            onClick={() => {
+              if (showSplitPayment || paymentMethods.length > 1) {
+                cancelSplitPayment();
+              } else {
+                setShowSplitPayment(true);
+              }
+            }}
           >
-            {showSplitPayment ? 'Cancelar dividir' : 'Dividir pago'}
+            {showSplitPayment || paymentMethods.length > 1
+              ? 'Cancelar dividir'
+              : 'Dividir pago'}
           </button>
-          {showSplitPayment && (
+          {showSplitPayment && paymentMethods.length <= 1 && (
             <div className="add-payment-choices">
+              {PAYMENT_TYPES.map(pt => (
+                <button key={pt.id} type="button" onClick={() => addPayment(pt.id)}>
+                  {pt.icon} {pt.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {!isSimplePay && (
+            <div className="add-payment-choices">
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.85rem', color: '#5a6a67' }}>
+                Pagado ${paidTotal.toFixed(2)} · Resta $
+                {Math.max(0, computedTotal - paidTotal).toFixed(2)}
+              </p>
               {PAYMENT_TYPES.map(pt => (
                 <button key={pt.id} type="button" onClick={() => addPayment(pt.id)}>
                   {pt.icon} {pt.label}

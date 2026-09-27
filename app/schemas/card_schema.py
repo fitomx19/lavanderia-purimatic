@@ -20,8 +20,8 @@ class CardSchema(Schema):
     balance = fields.Decimal(
         places=2,
         missing=0.00,
-        validate=validate.Range(min=0, max=1000),
-        error_messages={'invalid': 'El saldo debe ser un número válido entre 0 y 1000'}
+        validate=validate.Range(min=0, max=10000),
+        error_messages={'invalid': 'El saldo debe ser un número válido entre 0 y 10000'}
     )
     is_active = fields.Bool(missing=True)
     created_at = fields.DateTime(dump_only=True)
@@ -58,7 +58,7 @@ class CardUpdateSchema(Schema):
     _id = fields.Str(dump_only=True)
     balance = fields.Decimal(
         places=2,
-        validate=validate.Range(min=0, max=1000),
+        validate=validate.Range(min=0, max=10000),
         allow_none=True
     )
     is_active = fields.Bool(allow_none=True)
@@ -72,7 +72,7 @@ class CardBalanceSchema(Schema):
     amount = fields.Decimal(
         required=True,
         places=2,
-        validate=validate.Range(min=0.01, max=1000),
+        validate=validate.Range(min=0.01, max=10000),
         error_messages={'required': 'El monto es requerido'}
     )
     operation = fields.Str(
@@ -97,7 +97,7 @@ class CardTransferSchema(Schema):
     amount = fields.Decimal(
         required=True,
         places=2,
-        validate=validate.Range(min=0.01, max=1000),
+        validate=validate.Range(min=0.01, max=10000),
         error_messages={'required': 'El monto es requerido'}
     )
 
@@ -136,7 +136,7 @@ class NFCPaymentValidationSchema(Schema):
     amount = fields.Decimal(
         required=True,
         places=2,
-        validate=validate.Range(min=0.01, max=1000),
+        validate=validate.Range(min=0.01, max=10000),
         error_messages={'required': 'El monto es requerido'}
     )
     timeout = fields.Integer(
@@ -157,7 +157,7 @@ class NFCPaymentProcessSchema(Schema):
     amount = fields.Decimal(
         required=True,
         places=2,
-        validate=validate.Range(min=0.01, max=1000),
+        validate=validate.Range(min=0.01, max=10000),
         error_messages={'required': 'El monto es requerido'}
     )
 

@@ -36,6 +36,8 @@ class SaleService:
         self.nfc_payment_service = NFCPaymentService()
         self.esp32_service = ESP32Service()  
         self._esp32_last_error: Optional[str] = None
+        from app.repositories.store_repository import StoreRepository
+        self.store_repository = StoreRepository()
     
     def create_sale(self, sale_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -86,13 +88,20 @@ class SaleService:
                     'success': False,
                     'message': payment_validation['message']
                 }
+
+            # Folio secuencial mensual YYYYMM-NNNN
+            sale_data_enriched['folio'] = self.sale_repository.next_folio()
             
             # Crear la venta
             sale = self.sale_repository.upsert(sale_data_enriched)
             
             if sale:
                 # Procesar pagos (descontar saldos de tarjetas)
-                payment_result = self._process_payments(sale['_id'], sale_data_enriched['payment_methods'])
+                payment_result = self._process_payments(
+                    sale['_id'],
+                    sale_data_enriched['payment_methods'],
+                    employee_id=str(sale_data_enriched.get('employee_id') or 'system'),
+                )
                 if not payment_result['success']:
                     # Revertir venta si falla el pago
                     self.sale_repository.update_sale_status(sale['_id'], 'cancelled')
@@ -118,10 +127,63 @@ class SaleService:
                             service_item.get('service_cycle_id')
                         )
 
+                # Nombre del empleado que atendió (para el ticket)
+                employee_name = None
+                try:
+                    from app.repositories.user_employee_repository import UserEmployeeRepository
+                    emp = UserEmployeeRepository().find_by_id(str(sale_data_enriched.get('employee_id') or ''))
+                    if emp:
+                        employee_name = (
+                            emp.get('nombre')
+                            or emp.get('name')
+                            or emp.get('full_name')
+                            or emp.get('username')
+                        )
+                except Exception as emp_err:
+                    logger.warning(f"No se pudo resolver nombre de empleado: {emp_err}")
+
+                # Imprimir ticket 80mm (antes de encender; fallo no revierte el cobro)
+                ticket_printed = False
+                ticket_message = None
+                try:
+                    from app.services.ticket_print_service import TicketPrintService
+                    print_sale = dict(sale)
+                    print_sale['folio'] = sale.get('folio') or sale_data_enriched.get('folio')
+                    print_sale['items'] = sale_data_enriched.get('items', sale.get('items'))
+                    print_sale['payment_methods'] = sale_data_enriched.get(
+                        'payment_methods', sale.get('payment_methods')
+                    )
+                    print_sale['total_amount'] = sale_data_enriched.get(
+                        'total_amount', sale.get('total_amount')
+                    )
+                    print_sale['subtotal_before_discount'] = sale_data_enriched.get(
+                        'subtotal_before_discount', sale.get('subtotal_before_discount')
+                    )
+                    print_sale['discount_amount'] = sale_data_enriched.get(
+                        'discount_amount', sale.get('discount_amount')
+                    )
+                    print_sale['discount_reason'] = sale_data_enriched.get(
+                        'discount_reason', sale.get('discount_reason')
+                    )
+                    print_sale['employee_name'] = employee_name
+                    print_result = TicketPrintService(self.store_repository).print_sale_ticket(
+                        print_sale,
+                        card_balances=payment_result.get('card_balances') or [],
+                    )
+                    ticket_printed = bool(print_result.get('success'))
+                    ticket_message = print_result.get('message')
+                    if not ticket_printed:
+                        logger.warning(f"Ticket no impreso: {ticket_message}")
+                except Exception as print_err:
+                    ticket_message = str(print_err)
+                    logger.error(f"Error al imprimir ticket de venta: {print_err}")
+
                 return {
                     'success': True,
                     'message': 'Venta creada exitosamente',
-                    'data': sale_response
+                    'data': sale_response,
+                    'ticket_printed': ticket_printed,
+                    'ticket_message': ticket_message,
                 }
             else:
                 return {
@@ -168,6 +230,276 @@ class SaleService:
                     logger.warning(f"Tipo de máquina desconocido para {machine_id}. No se pudo actualizar el estado a ocupada.")
         except Exception as e:
             logger.error(f"Error al marcar máquina {machine_id} como ocupada en creación de venta: {e}")
+
+    def create_reload_sale(self, reload_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Crear venta de recarga: cobra efectivo/TC y acredita saldo a la tarjeta.
+        """
+        from app.schemas.card_benefits_schema import (
+            reload_sale_schema,
+            compute_reload_credit,
+        )
+
+        try:
+            validated = reload_sale_schema.load(reload_data)
+            card_id = validated['card_id']
+            card = self.card_repository.find_by_id(card_id)
+            if not card or not card.get('is_active', True):
+                return {'success': False, 'message': 'Tarjeta no encontrada o inactiva'}
+
+            pay_amount = round(float(validated['pay_amount']), 2)
+            benefits = self.store_repository.get_card_benefits_settings()
+            package_index = validated.get('package_index')
+            credit_from_cfg, bonus_from_cfg, source = compute_reload_credit(
+                benefits, pay_amount, package_index
+            )
+
+            if validated.get('credit_amount') is not None:
+                credit_amount = round(float(validated['credit_amount']), 2)
+            else:
+                credit_amount = credit_from_cfg
+            bonus_amount = round(max(0.0, credit_amount - pay_amount), 2)
+
+            if benefits.get('reload_promo_mode') == 'paquetes' and benefits.get('reload_bonus_enabled'):
+                packages = benefits.get('reload_packages') or []
+                if package_index is None and source != 'paquete':
+                    return {
+                        'success': False,
+                        'message': 'Selecciona un paquete de recarga válido',
+                    }
+                if package_index is not None:
+                    try:
+                        pkg = packages[int(package_index)]
+                        if abs(float(pkg.get('pay_amount') or 0) - pay_amount) > 0.01:
+                            return {'success': False, 'message': 'El monto no coincide con el paquete'}
+                        credit_amount = round(float(pkg.get('credit_amount') or pay_amount), 2)
+                        bonus_amount = round(credit_amount - pay_amount, 2)
+                    except (IndexError, TypeError, ValueError):
+                        return {'success': False, 'message': 'Paquete de recarga inválido'}
+
+            payments = validated.get('payment_methods') or []
+            for pm in payments:
+                if pm.get('payment_type') not in ('efectivo', 'tarjeta_credito'):
+                    return {
+                        'success': False,
+                        'message': 'La recarga solo se cobra en efectivo o tarjeta bancaria',
+                    }
+                pm['amount'] = float(pm.get('amount') or 0)
+
+            paid = round(sum(float(p.get('amount') or 0) for p in payments), 2)
+            if abs(paid - pay_amount) > 0.01:
+                return {
+                    'success': False,
+                    'message': f'El pago (${paid:.2f}) no coincide con el monto a cobrar (${pay_amount:.2f})',
+                }
+
+            current_balance = float(card.get('balance') or 0)
+            if current_balance + credit_amount > 10000:
+                return {
+                    'success': False,
+                    'message': f'El saldo resultante excedería el máximo permitido ($10000). Saldo actual: ${current_balance:.2f}',
+                }
+
+            client_id = validated.get('client_id') or card.get('client_id')
+            client_name = None
+            client_phone = None
+            try:
+                from app.repositories.user_client_repository import UserClientRepository
+                client = UserClientRepository().find_by_id(str(client_id)) if client_id else None
+                if client:
+                    client_name = client.get('nombre') or client.get('name')
+                    client_phone = client.get('telefono') or client.get('phone')
+            except Exception:
+                pass
+
+            employee_id = str(validated.get('employee_id') or 'system')
+            folio = self.sale_repository.next_folio()
+            sale_payload = {
+                'sale_type': 'recarga',
+                'folio': folio,
+                'store_id': validated['store_id'],
+                'employee_id': employee_id,
+                'client_id': str(client_id) if client_id else None,
+                'client_name': client_name,
+                'client_phone': client_phone,
+                'total_amount': pay_amount,
+                'pay_amount': pay_amount,
+                'credit_amount': credit_amount,
+                'bonus_amount': bonus_amount,
+                'reload_card_id': card_id,
+                'reload_source': source,
+                'notes': validated.get('notes') or '',
+                'payment_methods': payments,
+                'items': {
+                    'products': [],
+                    'services': [],
+                    'reload': {
+                        'card_id': card_id,
+                        'card_number': card.get('card_number'),
+                        'pay_amount': pay_amount,
+                        'credit_amount': credit_amount,
+                        'bonus_amount': bonus_amount,
+                    },
+                },
+                'status': 'completed',
+                'completed_at': datetime.utcnow(),
+            }
+
+            sale = self.sale_repository.upsert(sale_payload)
+            if not sale:
+                return {'success': False, 'message': 'No se pudo registrar la venta de recarga'}
+
+            updated = self.card_repository.update_balance(
+                card_id,
+                credit_amount,
+                'add',
+                employee_id,
+                'recarga_venta',
+                sale_id=str(sale.get('_id')),
+                notes=f'Recarga venta {folio}: pagó ${pay_amount:.2f}, acreditó ${credit_amount:.2f}',
+            )
+            if not updated:
+                self.sale_repository.update_sale_status(sale['_id'], 'cancelled')
+                return {
+                    'success': False,
+                    'message': 'No se pudo acreditar el saldo (¿límite de tarjeta?)',
+                }
+
+            employee_name = None
+            try:
+                from app.repositories.user_employee_repository import UserEmployeeRepository
+                emp = UserEmployeeRepository().find_by_id(employee_id)
+                if emp:
+                    employee_name = (
+                        emp.get('nombre') or emp.get('name') or emp.get('username')
+                    )
+            except Exception:
+                pass
+
+            ticket_printed = False
+            ticket_message = None
+            try:
+                from app.services.ticket_print_service import TicketPrintService
+                print_sale = dict(sale)
+                print_sale['employee_name'] = employee_name
+                print_sale['client_name'] = client_name
+                print_sale['client_phone'] = client_phone
+                print_result = TicketPrintService(self.store_repository).print_sale_ticket(
+                    print_sale,
+                    card_balances=[{
+                        'card_id': card_id,
+                        'card_number': card.get('card_number'),
+                        'balance_after': float(updated.get('balance') or 0),
+                    }],
+                )
+                ticket_printed = bool(print_result.get('success'))
+                ticket_message = print_result.get('message')
+            except Exception as print_err:
+                ticket_message = str(print_err)
+                logger.error(f"Error imprimiendo ticket de recarga: {print_err}")
+
+            sale_response = sale_response_schema.dump(sale) if sale else sale
+            if isinstance(sale_response, dict):
+                sale_response['sale_type'] = 'recarga'
+                sale_response['credit_amount'] = credit_amount
+                sale_response['bonus_amount'] = bonus_amount
+                sale_response['pay_amount'] = pay_amount
+
+            return {
+                'success': True,
+                'message': 'Recarga registrada y cobrada',
+                'data': sale_response,
+                'ticket_printed': ticket_printed,
+                'ticket_message': ticket_message,
+                'card_balance': float(updated.get('balance') or 0),
+            }
+        except ValidationError as e:
+            return {'success': False, 'message': 'Datos inválidos', 'errors': e.messages}
+        except Exception as e:
+            logger.error(f"Error en create_reload_sale: {e}")
+            return {'success': False, 'message': 'Error interno al procesar la recarga'}
+
+    def _uses_tarjeta_recargable(self, payment_methods: List[Dict[str, Any]]) -> bool:
+        return any(
+            (pm or {}).get('payment_type') == 'tarjeta_recargable'
+            for pm in (payment_methods or [])
+        )
+
+    def _apply_card_pay_discount_to_services(
+        self,
+        services: List[Dict[str, Any]],
+        payment_methods: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Ajusta precios de servicios si hay pago con tarjeta_recargable y config activa.
+        Mutates services in place. Returns discount summary.
+        """
+        from app.schemas.card_benefits_schema import effective_pay_discount_style
+
+        summary = {
+            'subtotal_before_discount': 0.0,
+            'discount_amount': 0.0,
+            'discount_reason': None,
+            'services_total': 0.0,
+        }
+        if not services:
+            return summary
+
+        benefits = self.store_repository.get_card_benefits_settings()
+        style = effective_pay_discount_style(benefits)
+        apply = bool(style) and self._uses_tarjeta_recargable(payment_methods)
+        percent = float(benefits.get('pay_discount_percent') or 0) if benefits else 0.0
+
+        for service_item in services:
+            cycle = self.service_cycle_repository.find_by_id(service_item['service_cycle_id'])
+            if not cycle:
+                continue
+
+            if cycle.get('service_type') == 'encargo_lavado':
+                try:
+                    weight = float(service_item.get('weight_kg') or 0)
+                except (TypeError, ValueError):
+                    weight = 0
+                base_ppk = float(cycle.get('price_per_kg') or 0)
+                price_original = round(base_ppk * weight, 2)
+                if apply and style == 'porcentaje' and percent > 0:
+                    price_final = round(price_original * (1 - percent / 100.0), 2)
+                elif apply and style == 'precio_ciclo':
+                    tarjeta_ppk = cycle.get('price_per_kg_tarjeta')
+                    if tarjeta_ppk is not None:
+                        price_final = round(float(tarjeta_ppk) * weight, 2)
+                    else:
+                        price_final = price_original
+                else:
+                    # Sin descuento: respetar cálculo base (no confiar ciegamente en front)
+                    price_final = price_original
+            else:
+                price_original = float(cycle.get('price') or 0)
+                if apply and style == 'porcentaje' and percent > 0:
+                    price_final = round(price_original * (1 - percent / 100.0), 2)
+                elif apply and style == 'precio_ciclo':
+                    tarjeta_price = cycle.get('price_tarjeta')
+                    if tarjeta_price is not None:
+                        price_final = float(tarjeta_price)
+                    else:
+                        price_final = price_original
+                else:
+                    price_final = price_original
+
+            savings = round(max(0.0, price_original - price_final), 2)
+            service_item['price_original'] = float(price_original)
+            service_item['price'] = float(price_final)
+            service_item['savings'] = float(savings)
+            summary['subtotal_before_discount'] += price_original
+            summary['discount_amount'] += savings
+            summary['services_total'] += price_final
+
+        summary['subtotal_before_discount'] = round(summary['subtotal_before_discount'], 2)
+        summary['discount_amount'] = round(summary['discount_amount'], 2)
+        summary['services_total'] = round(summary['services_total'], 2)
+        if summary['discount_amount'] > 0:
+            summary['discount_reason'] = 'tarjeta_recargable'
+        return summary
 
     def _enrich_sale_data(self, sale_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -216,11 +548,12 @@ class SaleService:
                 subtotal = unit_price * quantity
                 
                 # Actualizar item con precios calculados
+                product_item['nombre'] = product.get('nombre', 'Producto')
                 product_item['unit_price'] = float(unit_price)
                 product_item['subtotal'] = float(subtotal)
                 total_amount += subtotal
             
-            # Procesar servicios
+            # Procesar servicios (validaciones de máquina/ciclo)
             for service_item in services:
                 cycle = self.service_cycle_repository.find_by_id(service_item['service_cycle_id'])
                 if not cycle:
@@ -256,39 +589,42 @@ class SaleService:
                         'message': validation['message']
                     }
                 
-                # Calcular precio y duración basado en el tipo de servicio
-                price = 0.0
                 if cycle.get('service_type') == 'encargo_lavado':
-                    # Intentar convertir weight_kg a float primero
                     try:
-                        weight_kg_val = float(service_item.get('weight_kg', 0)) # Usar .get para evitar KeyError
+                        weight_kg_val = float(service_item.get('weight_kg', 0))
                     except (ValueError, TypeError):
                         return {
                             'success': False,
                             'message': 'Peso en kilogramos inválido para encargo_lavado. Debe ser un número.'
                         }
-
                     if weight_kg_val <= 0:
                         return {
                             'success': False,
                             'message': 'Peso en kilogramos debe ser un número positivo para encargo_lavado.'
                         }
-                    price = float(service_item['price']) # Usar el precio calculado enviado desde el frontend
-                    service_item['weight_kg'] = weight_kg_val # Actualizar el ítem con el valor flotante
-                else:
-                    price = float(cycle.get('price', 0)) # Usar el precio fijo del ciclo de servicio
+                    service_item['weight_kg'] = weight_kg_val
 
                 duration = cycle.get('duration_minutes', 30)
-                
-                # Actualizar item con datos calculados
-                service_item['price'] = float(price)
                 service_item['duration'] = int(duration)
                 service_item['machine_type'] = machine_type
-                total_amount += price
-            
-            # Actualizar total si no fue proporcionado
-            if not sale_data.get('total_amount'):
-                sale_data['total_amount'] = float(total_amount)
+                service_item['cycle_name'] = cycle.get('name') or cycle.get('nombre') or 'Servicio'
+                service_item['machine_name'] = (
+                    machine.get('nombre') or machine.get('name') or service_item.get('machine_id')
+                )
+
+            discount_info = self._apply_card_pay_discount_to_services(
+                services, sale_data.get('payment_methods') or []
+            )
+            total_amount += discount_info['services_total']
+
+            sale_data['subtotal_before_discount'] = round(
+                float(total_amount - discount_info['services_total'] + discount_info['subtotal_before_discount']),
+                2,
+            )
+            sale_data['discount_amount'] = discount_info['discount_amount']
+            sale_data['discount_reason'] = discount_info['discount_reason']
+            # El total siempre se recalcula en backend (incluye descuento)
+            sale_data['total_amount'] = float(round(total_amount, 2))
             
             # Convertir Decimals en payment_methods a float
             for payment_method in sale_data.get('payment_methods', []):
@@ -564,9 +900,15 @@ class SaleService:
         
         return {'valid': True, 'message': 'Pagos válidos'}
     
-    def _process_payments(self, sale_id: str, payment_methods: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Procesar pagos (descontar saldos de tarjetas)"""
+    def _process_payments(
+        self,
+        sale_id: str,
+        payment_methods: List[Dict[str, Any]],
+        employee_id: str = 'system',
+    ) -> Dict[str, Any]:
+        """Procesar pagos (descontar saldos de tarjetas) y devolver saldos restantes."""
         try:
+            card_balances = []
             for payment in payment_methods:
                 if payment['payment_type'] == 'tarjeta_recargable':
                     amount = float(payment['amount'])
@@ -574,17 +916,36 @@ class SaleService:
                     nfc_uid = payment.get('nfc_uid')
                     
                     if nfc_uid:
-                        # NUEVO: Procesar pago NFC
-                        result = self.card_repository.process_nfc_payment(nfc_uid, amount)
+                        result = self.card_repository.process_nfc_payment(
+                            nfc_uid, amount, employee_id=employee_id, sale_id=sale_id
+                        )
                         if not result['success']:
                             return {'success': False, 'message': f'Error al procesar pago NFC: {result["message"]}'}
+                        card_data = result.get('card_data') or {}
+                        card_balances.append({
+                            'nfc_uid': nfc_uid,
+                            'balance_after': card_data.get('new_balance'),
+                            'new_balance': card_data.get('new_balance'),
+                            'amount_charged': amount,
+                        })
                     elif card_id:
-                        # EXISTENTE: Procesar pago tradicional
-                        result = self.card_repository.update_balance(card_id, amount, 'subtract')
+                        result = self.card_repository.update_balance(
+                            card_id, amount, 'subtract', employee_id, 'pago_venta', sale_id=sale_id
+                        )
                         if not result:
                             return {'success': False, 'message': f'Error al procesar pago con tarjeta {card_id}'}
+                        card_balances.append({
+                            'card_id': card_id,
+                            'balance_after': result.get('balance'),
+                            'new_balance': result.get('balance'),
+                            'amount_charged': amount,
+                        })
             
-            return {'success': True, 'message': 'Pagos procesados exitosamente'}
+            return {
+                'success': True,
+                'message': 'Pagos procesados exitosamente',
+                'card_balances': card_balances,
+            }
             
         except Exception as e:
             logger.error(f"Error al procesar pagos: {e}")
@@ -933,27 +1294,15 @@ class SaleService:
         employee_id: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        payment_type: Optional[str] = None
+        payment_type: Optional[str] = None,
+        folio: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Obtener todas las ventas con filtros opcionales
-        
-        Args:
-            page: Página actual
-            per_page: Elementos por página
-            status: Filtrar por estado
-            employee_id: Filtrar por empleado
-            start_date: Fecha inicial (YYYY-MM-DD)
-            end_date: Fecha final (YYYY-MM-DD)
-            payment_type: Filtrar por tipo de pago
-            
-        Returns:
-            Dict: Resultado con ventas y paginación
         """
         try:
             filters = {}
             
-            # Aplicar filtros
             if status:
                 filters['status'] = status
             
@@ -965,15 +1314,16 @@ class SaleService:
                 if start_date:
                     date_filter['$gte'] = datetime.fromisoformat(start_date)
                 if end_date:
-                    # Agregar un día para incluir todo el día final
                     end_dt = datetime.fromisoformat(end_date) + timedelta(days=1)
                     date_filter['$lt'] = end_dt
                 filters['created_at'] = date_filter
             
             if payment_type:
                 filters['payment_methods.payment_type'] = payment_type
+
+            if folio:
+                filters['folio'] = str(folio).strip()
             
-            # Obtener ventas con filtros
             result = self.sale_repository.find_many(
                 filter_criteria=filters,
                 page=page,
@@ -982,7 +1332,6 @@ class SaleService:
                 sort_order=-1
             )
             
-            # Serializar con schema
             sales_response = sales_response_schema.dump(result['documents'])
             
             return {

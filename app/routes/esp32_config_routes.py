@@ -33,20 +33,22 @@ def list_esp32_configs(current_user):
         return error_response('Error interno del servidor', 500)
 
 
-@esp32_config_bp.route('/esp32-config/<esp32_id>', methods=['GET'])
+@esp32_config_bp.route('/esp32-config/<board_id>', methods=['GET'])
 @employee_required
-def get_esp32_config(current_user, esp32_id):
-    """Obtener una placa ESP32 por su esp32_id."""
+def get_esp32_config(current_user, board_id):
+    """Obtener una placa por _id o por un esp32_id contenido."""
     try:
-        doc = store_repository.get_esp32_config_by_id(esp32_id)
+        doc = store_repository.get_esp32_config_by_board_id(board_id)
         if not doc:
-            return error_response(f'No hay configuración para esp32_id {esp32_id}', 404)
+            doc = store_repository.get_esp32_config_by_id(board_id)
+        if not doc:
+            return error_response(f'No hay configuración para {board_id}', 404)
         return success_response(
             data=esp32_config_response_schema.dump(doc),
             message='Configuración ESP32 encontrada',
         )
     except Exception as e:
-        logger.error(f"Error obteniendo esp32_config {esp32_id}: {e}")
+        logger.error(f"Error obteniendo esp32_config {board_id}: {e}")
         return error_response('Error interno del servidor', 500)
 
 
@@ -54,12 +56,14 @@ def get_esp32_config(current_user, esp32_id):
 @employee_required
 def upsert_esp32_config(current_user):
     """
-    Crear o actualizar una placa ESP32.
+    Crear una placa ESP32 (una URL + varios esp32_ids).
 
     Body:
-        esp32_id: id de la placa (debe coincidir con washers.esp32_id)
+        esp32_ids: ["W001", "W002"]  (o string "W001, W002")
         esp32_url: http://IP_LOCAL/laundry-update
-        is_active: bool (opcional, default true)
+        name: opcional
+        is_active: bool (opcional)
+        _id: si se envía, actualiza esa placa
     """
     try:
         data = request.get_json()
@@ -67,9 +71,29 @@ def upsert_esp32_config(current_user):
             return error_response('Datos requeridos', 400)
 
         validated = esp32_config_schema.load(data)
+        if data.get('_id'):
+            validated['_id'] = str(data['_id'])
+
+        conflict_check = store_repository._ids_conflict(
+            validated.get('esp32_ids') or [],
+            exclude_board_id=validated.get('_id'),
+        )
+        if conflict_check:
+            return error_response(
+                f'El esp32_id "{conflict_check}" ya está asignado a otra placa',
+                400,
+            )
+
+        # Asegurar lista (puede ser vacía al crear solo la placa)
+        if validated.get('esp32_ids') is None:
+            validated['esp32_ids'] = []
+
         doc = store_repository.upsert_esp32_config(validated)
         if not doc:
-            return error_response('No se pudo guardar la configuración ESP32', 400)
+            return error_response(
+                'No se pudo guardar la configuración ESP32 (¿IDs duplicados?)',
+                400,
+            )
 
         return success_response(
             data=esp32_config_response_schema.dump(doc),
@@ -83,29 +107,38 @@ def upsert_esp32_config(current_user):
         return error_response('Error interno del servidor', 500)
 
 
-@esp32_config_bp.route('/esp32-config/<esp32_id>', methods=['PUT'])
+@esp32_config_bp.route('/esp32-config/<board_id>', methods=['PUT'])
 @employee_required
-def update_esp32_config(current_user, esp32_id):
-    """Actualizar URL o estado activo de una placa ya registrada."""
+def update_esp32_config(current_user, board_id):
+    """Actualizar URL, IDs o estado de una placa por su _id."""
     try:
         data = request.get_json()
         if not data:
             return error_response('Datos requeridos', 400)
 
         validated = esp32_config_update_schema.load(data)
-        payload = {'esp32_id': str(esp32_id)}
-        payload.update({k: v for k, v in validated.items() if v is not None})
-
-        existing = store_repository.get_esp32_config_by_id(esp32_id)
+        existing = store_repository.get_esp32_config_by_board_id(board_id)
         if not existing:
-            return error_response(f'No hay configuración para esp32_id {esp32_id}', 404)
+            # compat: board_id podría ser un esp32_id legacy
+            existing = store_repository.get_esp32_config_by_id(board_id)
+            if existing:
+                board_id = existing['_id']
+            else:
+                return error_response(f'No hay configuración para {board_id}', 404)
 
-        if 'esp32_url' not in payload:
-            payload['esp32_url'] = existing.get('esp32_url')
-        if 'is_active' not in payload:
-            payload['is_active'] = existing.get('is_active', True)
+        payload = {k: v for k, v in validated.items() if v is not None}
+        if 'esp32_ids' in payload:
+            conflict = store_repository._ids_conflict(payload['esp32_ids'], exclude_board_id=board_id)
+            if conflict:
+                return error_response(
+                    f'El esp32_id "{conflict}" ya está asignado a otra placa',
+                    400,
+                )
 
-        doc = store_repository.upsert_esp32_config(payload)
+        doc = store_repository.update_esp32_config_by_board_id(board_id, payload)
+        if not doc:
+            return error_response('No se pudo actualizar la placa', 400)
+
         return success_response(
             data=esp32_config_response_schema.dump(doc),
             message='Configuración ESP32 actualizada',
@@ -113,16 +146,17 @@ def update_esp32_config(current_user, esp32_id):
     except ValidationError as e:
         return error_response('Datos de entrada inválidos', 400, errors=e.messages)
     except Exception as e:
-        logger.error(f"Error actualizando esp32_config {esp32_id}: {e}")
+        logger.error(f"Error actualizando esp32_config {board_id}: {e}")
         return error_response('Error interno del servidor', 500)
 
 
-@esp32_config_bp.route('/esp32-config/<esp32_id>/test', methods=['POST'])
+@esp32_config_bp.route('/esp32-config/<board_id>/test', methods=['POST'])
 @employee_required
-def test_esp32_output(current_user, esp32_id):
+def test_esp32_output(current_user, board_id):
     """
-    Probar el relé de una placa sin crear una venta.
-    Body: { "action": "start" } o { "action": "stop" }
+    Probar el relé de un esp32_id de la placa sin crear una venta.
+    Body: { "action": "start"|"stop", "esp32_id": "W001" }
+    Si no se envía esp32_id, usa el primero de la placa.
     """
     try:
         from datetime import datetime, timedelta
@@ -133,9 +167,21 @@ def test_esp32_output(current_user, esp32_id):
         if action not in ('start', 'stop'):
             return error_response('action debe ser start o stop', 400)
 
-        existing = store_repository.get_esp32_config_by_id(esp32_id)
-        if not existing:
-            return error_response(f'No hay configuración para esp32_id {esp32_id}', 404)
+        board = store_repository.get_esp32_config_by_board_id(board_id)
+        if not board:
+            board = store_repository.get_esp32_config_by_id(board_id)
+        if not board:
+            return error_response(f'No hay configuración para {board_id}', 404)
+
+        ids = board.get('esp32_ids') or []
+        relay_id = str(data.get('esp32_id') or '').strip()
+        if not relay_id:
+            relay_id = ids[0] if ids else board_id
+        elif ids and relay_id not in ids:
+            return error_response(
+                f'esp32_id {relay_id} no pertenece a esta placa',
+                400,
+            )
 
         now = datetime.utcnow()
         machine_data = {
@@ -144,40 +190,40 @@ def test_esp32_output(current_user, esp32_id):
         }
         service = ESP32Service()
         if action == 'stop':
-            result = service.stop_machine(str(esp32_id), machine_data)
+            result = service.stop_machine(str(relay_id), machine_data)
         else:
-            result = service.start_machine(str(esp32_id), machine_data)
+            result = service.start_machine(str(relay_id), machine_data)
 
         if result.get('success'):
             verb = 'encendido' if action == 'start' else 'apagado'
             return success_response(
                 data=result,
-                message=f'Comando de {verb} enviado a {esp32_id}',
+                message=f'Comando de {verb} enviado a {relay_id}',
             )
         return error_response(result.get('message') or 'La placa no respondió', 502)
     except Exception as e:
-        logger.error(f"Error probando ESP32 {esp32_id}: {e}")
+        logger.error(f"Error probando ESP32 {board_id}: {e}")
         return error_response('Error interno del servidor', 500)
 
 
-@esp32_config_bp.route('/esp32-config/<esp32_id>', methods=['DELETE'])
+@esp32_config_bp.route('/esp32-config/<board_id>', methods=['DELETE'])
 @employee_required
-def deactivate_esp32_config(current_user, esp32_id):
+def deactivate_esp32_config(current_user, board_id):
     """Desactivar una placa (no borra el documento)."""
     try:
-        existing = store_repository.get_esp32_config_by_id(esp32_id)
+        existing = store_repository.get_esp32_config_by_board_id(board_id)
         if not existing:
-            return error_response(f'No hay configuración para esp32_id {esp32_id}', 404)
+            existing = store_repository.get_esp32_config_by_id(board_id)
+            if existing:
+                board_id = existing['_id']
+            else:
+                return error_response(f'No hay configuración para {board_id}', 404)
 
-        doc = store_repository.upsert_esp32_config({
-            'esp32_id': str(esp32_id),
-            'esp32_url': existing.get('esp32_url'),
-            'is_active': False,
-        })
+        doc = store_repository.deactivate_esp32_config_by_board_id(board_id)
         return success_response(
             data=esp32_config_response_schema.dump(doc),
-            message=f'ESP32 {esp32_id} desactivado',
+            message='Placa ESP32 desactivada',
         )
     except Exception as e:
-        logger.error(f"Error desactivando esp32_config {esp32_id}: {e}")
+        logger.error(f"Error desactivando esp32_config {board_id}: {e}")
         return error_response('Error interno del servidor', 500)

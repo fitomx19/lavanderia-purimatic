@@ -224,6 +224,7 @@ class SaleResponseSchema(Schema):
     """
     
     _id = fields.Str()
+    folio = fields.Str(allow_none=True)
     client_id = fields.Str()
     employee_id = fields.Str()
     store_id = fields.Str()

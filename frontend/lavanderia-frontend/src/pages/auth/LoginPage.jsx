@@ -4,65 +4,78 @@ import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../../services/login';
 
 const LoginPage = () => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('AdminPurimatic2024');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Limpiar errores anteriores
+    setError('');
+    setBusy(true);
 
     try {
       const response = await loginUser(username, password);
-      console.log('Autenticación exitosa:', response);
-      localStorage.setItem('token', response.data.token); // Guardar el token
-      localStorage.setItem('user', JSON.stringify(response.data.user)); // Guardar datos del usuario (incluye el rol)
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      // Redirigir según el rol: el empleado solo tiene acceso a Ventas e Historial
       const role = response.data.user?.role;
       navigate(role === 'empleado' ? '/sales' : '/dashboard');
-
     } catch (err) {
-      console.error('Error de autenticación:', err);
       setError(err.message || 'Error de conexión');
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h2>Iniciar Sesión</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label htmlFor="username">Usuario:</label>
+    <div className="login-layout">
+      <div className="login-panel">
+        <div className="login-brand">
+          <p className="login-brand-name">Lavandería Purimatic</p>
+          <h1>Iniciar sesión</h1>
+          <p className="login-help">Accede con tu usuario de tienda para continuar.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="login-form">
+          <label htmlFor="username">
+            Usuario
             <input
               type="text"
               id="username"
               name="username"
-              placeholder="Ingresa tu usuario"
+              autoComplete="username"
+              placeholder="Tu usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              required
             />
-          </div>
-          <div className="input-group">
-            <label htmlFor="password">Contraseña:</label>
+          </label>
+
+          <label htmlFor="password">
+            Contraseña
             <input
               type="password"
               id="password"
               name="password"
-              placeholder="Ingresa tu contraseña"
+              autoComplete="current-password"
+              placeholder="Tu contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
-          </div>
-          <button type="submit" className="login-button">Entrar</button>
-          {error && <p className="error-message" style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+          </label>
+
+          {error && <div className="login-error">{error}</div>}
+
+          <button type="submit" className="login-submit" disabled={busy}>
+            {busy ? 'Entrando…' : 'Entrar'}
+          </button>
         </form>
-        <p className="demo-message">Esta es una pantalla de login de demostración.</p>
       </div>
     </div>
   );
 };
 
-export default LoginPage; 
+export default LoginPage;

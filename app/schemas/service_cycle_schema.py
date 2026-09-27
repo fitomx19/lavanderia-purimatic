@@ -39,6 +39,16 @@ class ServiceCycleSchema(Schema):
         allow_none=True,
         error_messages={'required': 'El precio por kilogramo es requerido para encargo de lavado'}
     )
+    price_tarjeta = fields.Decimal(
+        places=2,
+        validate=validate.Range(min=0.01, max=1000),
+        allow_none=True,
+    )
+    price_per_kg_tarjeta = fields.Decimal(
+        places=2,
+        validate=validate.Range(min=0.01, max=100),
+        allow_none=True,
+    )
     allowed_machines = fields.List(
         fields.Nested({
             '_id': fields.Str(required=True, validate=lambda x: ObjectId.is_valid(x)),
@@ -73,11 +83,13 @@ class ServiceCycleSchema(Schema):
                 raise ValidationError('El precio por kilogramo es requerido para encargo de lavado', 'price_per_kg')
             # Remover price si existe para encargo_lavado
             data.pop('price', None)
+            data.pop('price_tarjeta', None)
         else:  # lavado o secado
             if not data.get('price'):
                 raise ValidationError('El precio es requerido para servicios de lavado y secado', 'price')
             # Remover price_per_kg si existe para otros tipos
             data.pop('price_per_kg', None)
+            data.pop('price_per_kg_tarjeta', None)
             
         return data
     
@@ -113,6 +125,16 @@ class ServiceCycleUpdateSchema(Schema):
         validate=validate.Range(min=0.01, max=100),
         allow_none=True
     )
+    price_tarjeta = fields.Decimal(
+        places=2,
+        validate=validate.Range(min=0.01, max=1000),
+        allow_none=True
+    )
+    price_per_kg_tarjeta = fields.Decimal(
+        places=2,
+        validate=validate.Range(min=0.01, max=100),
+        allow_none=True
+    )
     allowed_machines = fields.List(
         fields.Nested({
             '_id': fields.Str(required=True, validate=lambda x: ObjectId.is_valid(x)),
@@ -135,12 +157,14 @@ class ServiceCycleUpdateSchema(Schema):
                 raise ValidationError('El precio por kilogramo es requerido para encargo de lavado', 'price_per_kg')
             # Remover price si existe
             data.pop('price', None)
+            data.pop('price_tarjeta', None)
         elif service_type in ['lavado', 'secado']:
             # Si se está cambiando a lavado o secado, debe tener price
             if 'price' in data and not data.get('price'):
                 raise ValidationError('El precio es requerido para servicios de lavado y secado', 'price')
             # Remover price_per_kg si existe
             data.pop('price_per_kg', None)
+            data.pop('price_per_kg_tarjeta', None)
             
         return data
 
@@ -156,6 +180,8 @@ class ServiceCycleResponseSchema(Schema):
     duration_minutes = fields.Int()
     price = fields.Decimal(places=2)
     price_per_kg = fields.Decimal(places=2)
+    price_tarjeta = fields.Decimal(places=2, allow_none=True)
+    price_per_kg_tarjeta = fields.Decimal(places=2, allow_none=True)
     allowed_machines = fields.List(
         fields.Nested({
             '_id': fields.Str(),

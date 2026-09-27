@@ -33,9 +33,9 @@ export const saveEsp32Config = async (payload) => {
   }
 };
 
-export const updateEsp32Config = async (esp32Id, payload) => {
+export const updateEsp32Config = async (boardId, payload) => {
   try {
-    const response = await axios.put(`${API_BASE_URL}/api/esp32-config/${esp32Id}`, payload, {
+    const response = await axios.put(`${API_BASE_URL}/api/esp32-config/${boardId}`, payload, {
       headers: authHeaders(),
     });
     return response.data;
@@ -44,9 +44,9 @@ export const updateEsp32Config = async (esp32Id, payload) => {
   }
 };
 
-export const deactivateEsp32Config = async (esp32Id) => {
+export const deactivateEsp32Config = async (boardId) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/api/esp32-config/${esp32Id}`, {
+    const response = await axios.delete(`${API_BASE_URL}/api/esp32-config/${boardId}`, {
       headers: authHeaders(),
     });
     return response.data;
@@ -55,15 +55,15 @@ export const deactivateEsp32Config = async (esp32Id) => {
   }
 };
 
-export const testEsp32 = async (esp32Id, action) => {
+export const testEsp32 = async (boardId, action, esp32Id) => {
   try {
     const response = await axios.post(
-      `${API_BASE_URL}/api/esp32-config/${esp32Id}/test`,
-      { action },
+      `${API_BASE_URL}/api/esp32-config/${boardId}/test`,
+      { action, ...(esp32Id ? { esp32_id: esp32Id } : {}) },
       { headers: authHeaders() }
     );
     return response.data;
   } catch (error) {
-    unwrapError(error, `Error al probar ${action} en la placa ${esp32Id}`);
+    unwrapError(error, `Error al probar ${action} en la placa`);
   }
 };

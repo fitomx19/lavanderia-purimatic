@@ -73,9 +73,10 @@ class ServiceCycleService:
         try:
             # Validar datos según si es creación o actualización
             if '_id' in cycle_data:
-                # Actualización
-                validated_data = service_cycle_update_schema.load(cycle_data)
+                # Actualización: _id es dump_only en el schema, no puede ir en load()
                 cycle_id = cycle_data['_id']
+                payload = {k: v for k, v in cycle_data.items() if k != '_id'}
+                validated_data = service_cycle_update_schema.load(payload)
                 
                 # Verificar que el ciclo existe
                 existing_cycle = self.service_cycle_repository.find_by_id(cycle_id)
@@ -92,6 +93,10 @@ class ServiceCycleService:
                             'success': False,
                             'message': 'El nombre del ciclo ya existe'
                         }
+
+                # Conservar _id para que el upsert actualice por ID (no cree otro doc)
+                if isinstance(validated_data, dict):
+                    validated_data['_id'] = cycle_id
                 
             else:
                 # Creación

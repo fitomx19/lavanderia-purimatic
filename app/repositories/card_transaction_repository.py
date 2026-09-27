@@ -41,24 +41,76 @@ class CardTransactionRepository(BaseRepository):
             logger.error(f"Error al crear transacción: {e}")
             return None
     
-    def get_transactions_by_card(self, card_id: str, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
-        """
-        Obtener transacciones de una tarjeta específica
-        
-        Args:
-            card_id: ID de la tarjeta
-            page: Página actual
-            per_page: Elementos por página
-            
-        Returns:
-            Dict: Transacciones con paginación
-        """
+    def get_transactions_by_cards(
+        self,
+        card_ids: List[str],
+        transaction_type: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> Dict[str, Any]:
+        """Obtener transacciones de varias tarjetas (p.ej. todas las de un cliente)."""
+        if not card_ids:
+            return {
+                'documents': [],
+                'page': page,
+                'per_page': per_page,
+                'total': 0,
+                'total_pages': 0,
+            }
+        filter_criteria: Dict[str, Any] = {'card_id': {'$in': list(card_ids)}}
+        if transaction_type:
+            filter_criteria['transaction_type'] = transaction_type
+        if start_date or end_date:
+            created = {}
+            if start_date:
+                created['$gte'] = start_date
+            if end_date:
+                created['$lte'] = end_date
+            filter_criteria['created_at'] = created
         return self.find_many(
-            filter_criteria={'card_id': card_id},
+            filter_criteria=filter_criteria,
             page=page,
             per_page=per_page,
             sort_by='created_at',
-            sort_order=-1
+            sort_order=-1,
+        )
+
+    def get_transactions_filtered(
+        self,
+        card_id: Optional[str] = None,
+        card_ids: Optional[List[str]] = None,
+        transaction_type: Optional[str] = None,
+        employee_id: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> Dict[str, Any]:
+        """Filtros combinables para listado de transacciones."""
+        filter_criteria: Dict[str, Any] = {}
+        if card_ids:
+            filter_criteria['card_id'] = {'$in': list(card_ids)}
+        elif card_id:
+            filter_criteria['card_id'] = card_id
+        if transaction_type:
+            filter_criteria['transaction_type'] = transaction_type
+        if employee_id:
+            filter_criteria['employee_id'] = employee_id
+        if start_date or end_date:
+            created = {}
+            if start_date:
+                created['$gte'] = start_date
+            if end_date:
+                created['$lte'] = end_date
+            filter_criteria['created_at'] = created
+        return self.find_many(
+            filter_criteria=filter_criteria,
+            page=page,
+            per_page=per_page,
+            sort_by='created_at',
+            sort_order=-1,
         )
     
     def get_transactions_by_date_range(

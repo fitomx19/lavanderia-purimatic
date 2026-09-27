@@ -321,400 +321,689 @@ const ClientsPage = () => {
   };
 
   if (loading) {
-    return <div>Cargando clientes...</div>;
+    return (
+      <div className="clients-layout">
+        <Header />
+        <main className="clients-content">
+          <p className="clients-muted">Cargando clientes…</p>
+        </main>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <div className="clients-layout">
+        <Header />
+        <main className="clients-content">
+          <div className="clients-msg err">Error: {error}</div>
+        </main>
+      </div>
+    );
   }
 
   return (
-    <div className="clients-page-container">
+    <div className="clients-layout">
       <Header />
-      <h1>Gestión de Clientes</h1>
-      <div className="controls-section">
-        <button onClick={() => setShowCreateForm(!showCreateForm)} className="create-client-button">
-          {showCreateForm ? 'Cancelar' : 'Agregar Nuevo Cliente'}
-        </button>
-        <button onClick={handleQueryBalanceNFCClick} className="query-balance-nfc-button">
-          🔍 Consultar Saldo NFC
-        </button>
-      </div>
+      <main className="clients-content">
+        <header className="clients-page-head">
+          <div>
+            <h1>Gestión de clientes</h1>
+            <p className="clients-help">
+              Alta de clientes, edición y administración de tarjetas recargables (incluye NFC).
+            </p>
+          </div>
+          <div className="clients-toolbar">
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="clients-btn clients-btn--primary"
+            >
+              {showCreateForm ? 'Cancelar' : 'Nuevo cliente'}
+            </button>
+            <button
+              type="button"
+              onClick={handleQueryBalanceNFCClick}
+              className="clients-btn clients-btn--secondary"
+            >
+              Consultar saldo NFC
+            </button>
+          </div>
+        </header>
 
-      {showCreateForm && (
-        <form onSubmit={handleCreateClient} className="create-client-form">
-          <h2>Crear Nuevo Cliente</h2>
-          <input
-            type="text"
-            name="nombre"
-            placeholder="Nombre"
-            value={newClient.nombre}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={newClient.email}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="text"
-            name="telefono"
-            placeholder="Teléfono"
-            value={newClient.telefono}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="text"
-            name="direccion"
-            placeholder="Dirección"
-            value={newClient.direccion}
-            onChange={handleInputChange}
-            required
-          />
-          <button type="submit">Guardar Cliente</button>
-        </form>
-      )}
+        {showCreateForm && (
+          <section className="clients-card">
+            <h2>Nuevo cliente</h2>
+            <form onSubmit={handleCreateClient} className="clients-form">
+              <label>
+                Nombre
+                <input
+                  type="text"
+                  name="nombre"
+                  placeholder="Nombre completo"
+                  value={newClient.nombre}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="correo@ejemplo.com"
+                  value={newClient.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Teléfono
+                <input
+                  type="text"
+                  name="telefono"
+                  placeholder="Teléfono"
+                  value={newClient.telefono}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Dirección
+                <input
+                  type="text"
+                  name="direccion"
+                  placeholder="Dirección"
+                  value={newClient.direccion}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <div className="clients-form-actions">
+                <button type="submit" className="clients-btn clients-btn--primary">
+                  Guardar cliente
+                </button>
+                <button
+                  type="button"
+                  className="clients-btn clients-btn--ghost"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        <section className="clients-card clients-card--table">
+          <div className="clients-card-head">
+            <h2>Clientes</h2>
+            <span className="clients-count">{totalClients} registrados</span>
+          </div>
+
+          <div className="clients-table-wrap">
+            <table className="clients-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Contacto</th>
+                  <th>Dirección</th>
+                  <th>Saldo tarjetas</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((client) => (
+                  <tr key={client._id}>
+                    <td>
+                      <strong className="clients-name">{client.nombre}</strong>
+                    </td>
+                    <td>
+                      <div className="clients-contact">
+                        <span>{client.telefono || '—'}</span>
+                        <span className="clients-muted">{client.email || '—'}</span>
+                      </div>
+                    </td>
+                    <td className="clients-address">{client.direccion || '—'}</td>
+                    <td>
+                      <span className="clients-balance">
+                        ${Number(client.saldo_tarjeta_recargable || 0).toFixed(2)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`clients-badge ${client.is_active ? 'is-active' : 'is-inactive'}`}>
+                        {client.is_active ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="clients-row-actions">
+                        <button
+                          type="button"
+                          className="clients-btn clients-btn--sm clients-btn--secondary"
+                          onClick={() => handleEditClick(client)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="clients-btn clients-btn--sm clients-btn--accent"
+                          onClick={() => handleManageCardsClick(client)}
+                        >
+                          Tarjetas
+                        </button>
+                        <button
+                          type="button"
+                          className="clients-btn clients-btn--sm clients-btn--danger"
+                          onClick={() => handleDeleteClient(client._id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="clients-pagination">
+            <button
+              type="button"
+              className="clients-btn clients-btn--ghost"
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </button>
+            <span>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              type="button"
+              className="clients-btn clients-btn--ghost"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+            </button>
+          </div>
+        </section>
+      </main>
 
       {editingClient && (
-        <div className="edit-client-modal">
-          <form onSubmit={handleUpdateClient} className="edit-client-form">
-            <h2>Editar Cliente</h2>
-            <label>Nombre:</label>
-            <input
-              type="text"
-              name="nombre"
-              value={editFormData.nombre}
-              onChange={handleEditFormChange}
-              required
-            />
-            <label>Teléfono:</label>
-            <input
-              type="text"
-              name="telefono"
-              value={editFormData.telefono}
-              onChange={handleEditFormChange}
-              required
-            />
-            <label>Dirección:</label>
-            <input
-              type="text"
-              name="direccion"
-              value={editFormData.direccion}
-              onChange={handleEditFormChange}
-              required
-            />
-            <label>Email:</label>
-            <input
-              type="email"
-              name="email"
-              value={editFormData.email}
-              onChange={handleEditFormChange}
-              required
-            />
-            <button type="submit">Actualizar Cliente</button>
-            <button type="button" onClick={() => setEditingClient(null)}>Cancelar</button>
-          </form>
+        <div className="clients-modal-overlay" role="dialog" aria-modal="true">
+          <div className="clients-modal">
+            <div className="clients-modal-head">
+              <h2>Editar cliente</h2>
+              <button
+                type="button"
+                className="clients-modal-close"
+                onClick={() => setEditingClient(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleUpdateClient} className="clients-form">
+              <label>
+                Nombre
+                <input
+                  type="text"
+                  name="nombre"
+                  value={editFormData.nombre}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </label>
+              <label>
+                Teléfono
+                <input
+                  type="text"
+                  name="telefono"
+                  value={editFormData.telefono}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </label>
+              <label>
+                Dirección
+                <input
+                  type="text"
+                  name="direccion"
+                  value={editFormData.direccion}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  value={editFormData.email}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </label>
+              <div className="clients-form-actions">
+                <button type="submit" className="clients-btn clients-btn--primary">
+                  Guardar cambios
+                </button>
+                <button
+                  type="button"
+                  className="clients-btn clients-btn--ghost"
+                  onClick={() => setEditingClient(null)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
       {showCardModal && selectedClientForCard && (
-        <div className="card-modal">
-          <div className="card-modal-content">
-            <div className="modal-header">
-            <div className="nfc-status-indicator">
-                <div className={`nfc-reader-status ${nfcReaderStatus.connected ? 'connected' : 'disconnected'}`}>
-                  Lector NFC: {nfcReaderStatus.connected ? '🟢 Conectado' : '🔴 Desconectado'}
+        <div className="clients-modal-overlay" role="dialog" aria-modal="true">
+          <div className="clients-modal clients-modal--wide">
+            <div className="clients-modal-head">
+              <div>
+                <h2>Tarjetas de {selectedClientForCard.nombre}</h2>
+                <div
+                  className={`clients-nfc-pill ${nfcReaderStatus.connected ? 'is-on' : 'is-off'}`}
+                >
+                  Lector NFC: {nfcReaderStatus.connected ? 'Conectado' : 'Desconectado'}
                 </div>
               </div>
-              <h2>Tarjetas de {selectedClientForCard.nombre}</h2>
-              <button onClick={() => setShowCardModal(false)} className="close-button">X</button>
+              <button
+                type="button"
+                className="clients-modal-close"
+                onClick={() => setShowCardModal(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
             </div>
-            <form onSubmit={handleCreateCard} className="create-card-form">
-              <h3>Crear Nueva Tarjeta</h3>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Saldo Inicial"
-                value={newCardBalance}
-                onChange={(e) => setNewCardBalance(e.target.value)}
-                required
-              />
-              <button type="submit">Crear Tarjeta</button>
+
+            <form onSubmit={handleCreateCard} className="clients-form clients-form--inline">
+              <h3>Nueva tarjeta</h3>
+              <div className="clients-inline-row">
+                <label>
+                  Saldo inicial
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newCardBalance}
+                    onChange={(e) => setNewCardBalance(e.target.value)}
+                    required
+                  />
+                </label>
+                <button type="submit" className="clients-btn clients-btn--primary">
+                  Crear tarjeta
+                </button>
+              </div>
             </form>
-            <h3>Tarjetas Existentes</h3>
+
+            <h3 className="clients-section-title">Tarjetas existentes</h3>
             {currentClientCards.length > 0 ? (
-             <table className="cards-table">
-             <thead>
-               <tr>
-                 <th>Número de Tarjeta</th>
-                 <th>Saldo</th>
-                 <th>UID NFC</th>
-                 <th>NFC Activo</th>
-                 <th>Activa</th>
-                 <th>Acciones</th>
-               </tr>
-             </thead>
-             <tbody>
-               {currentClientCards.map((card) => (
-                 <tr key={card._id}>
-                   <td>{card.card_number}</td>
-                   <td>${card.balance}</td>
-                   <td>{card.nfc_uid || 'No vinculado'}</td>
-                   <td>{card.is_nfc_enabled ? '🟢 Sí' : '🔴 No'}</td>
-                   <td>{card.is_active ? 'Sí' : 'No'}</td>
-                   <td>
-                     <button onClick={() => handleAddSubtractBalanceClick(card)}>Añadir/Restar</button>
-                     {!card.nfc_uid ? (
-                       <button onClick={() => handleLinkNFCClick(card)} className="nfc-link-btn">
-                         🔗 Vincular NFC
-                       </button>
-                     ) : (
-                       <button onClick={() => handleReloadNFCClick(card)} className="nfc-reload-btn">
-                         💳 Recargar NFC
-                       </button>
-                     )}
-                     <button onClick={() => handleDeleteCard(card._id)}>Eliminar</button>
-                   </td>
-                 </tr>
-               ))}
-             </tbody>
-           </table>
+              <div className="clients-table-wrap">
+                <table className="clients-table clients-table--compact">
+                  <thead>
+                    <tr>
+                      <th>Número</th>
+                      <th>Saldo</th>
+                      <th>UID NFC</th>
+                      <th>NFC</th>
+                      <th>Activa</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentClientCards.map((card) => (
+                      <tr key={card._id}>
+                        <td className="mono">{card.card_number}</td>
+                        <td>${Number(card.balance || 0).toFixed(2)}</td>
+                        <td className="mono">{card.nfc_uid || '—'}</td>
+                        <td>
+                          <span className={`clients-badge ${card.is_nfc_enabled ? 'is-active' : 'is-inactive'}`}>
+                            {card.is_nfc_enabled ? 'Sí' : 'No'}
+                          </span>
+                        </td>
+                        <td>{card.is_active ? 'Sí' : 'No'}</td>
+                        <td>
+                          <div className="clients-row-actions">
+                            <button
+                              type="button"
+                              className="clients-btn clients-btn--sm clients-btn--secondary"
+                              onClick={() => handleAddSubtractBalanceClick(card)}
+                            >
+                              Ajuste saldo
+                            </button>
+                            {!card.nfc_uid ? (
+                              <button
+                                type="button"
+                                className="clients-btn clients-btn--sm clients-btn--accent"
+                                onClick={() => handleLinkNFCClick(card)}
+                              >
+                                Vincular NFC
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="clients-btn clients-btn--sm clients-btn--primary"
+                                onClick={() => handleReloadNFCClick(card)}
+                              >
+                                Recargar NFC
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="clients-btn clients-btn--sm clients-btn--danger"
+                              onClick={() => handleDeleteCard(card._id)}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <p>Este cliente no tiene tarjetas.</p>
+              <p className="clients-muted">Este cliente no tiene tarjetas.</p>
             )}
 
             {currentClientCards.length > 1 && (
-              <div className="transfer-section">
-                <h3 onClick={() => setShowTransferForm(!showTransferForm)} style={{ cursor: 'pointer' }}>
-                  Transferir Saldo entre Tarjetas {showTransferForm ? '▲' : '▼'}
-                </h3>
+              <div className="clients-transfer">
+                <button
+                  type="button"
+                  className="clients-transfer-toggle"
+                  onClick={() => setShowTransferForm(!showTransferForm)}
+                >
+                  Transferir saldo entre tarjetas {showTransferForm ? '▴' : '▾'}
+                </button>
                 {showTransferForm && (
-                  <form onSubmit={handleTransferBalance}>
-                    <select
-                      value={fromCardId}
-                      onChange={(e) => setFromCardId(e.target.value)}
-                      required
-                    >
-                      <option value="">Seleccionar Tarjeta Origen</option>
-                      {currentClientCards.map((card) => (
-                        <option key={card._id} value={card._id}>
-                          {card.card_number} (Saldo: {card.balance})
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={toCardId}
-                      onChange={(e) => setToCardId(e.target.value)}
-                      required
-                    >
-                      <option value="">Seleccionar Tarjeta Destino</option>
-                      {currentClientCards.map((card) => (
-                        <option key={card._id} value={card._id}>
-                          {card.card_number} (Saldo: {card.balance})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Cantidad a Transferir"
-                      value={transferAmount}
-                      onChange={(e) => setTransferAmount(e.target.value)}
-                      required
-                    />
-                    <button type="submit">Transferir</button>
+                  <form onSubmit={handleTransferBalance} className="clients-form">
+                    <label>
+                      Origen
+                      <select
+                        value={fromCardId}
+                        onChange={(e) => setFromCardId(e.target.value)}
+                        required
+                      >
+                        <option value="">Seleccionar tarjeta origen</option>
+                        {currentClientCards.map((card) => (
+                          <option key={card._id} value={card._id}>
+                            {card.card_number} (Saldo: {card.balance})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Destino
+                      <select
+                        value={toCardId}
+                        onChange={(e) => setToCardId(e.target.value)}
+                        required
+                      >
+                        <option value="">Seleccionar tarjeta destino</option>
+                        {currentClientCards.map((card) => (
+                          <option key={card._id} value={card._id}>
+                            {card.card_number} (Saldo: {card.balance})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Monto
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Cantidad a transferir"
+                        value={transferAmount}
+                        onChange={(e) => setTransferAmount(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <button type="submit" className="clients-btn clients-btn--primary">
+                      Transferir
+                    </button>
                   </form>
                 )}
               </div>
             )}
 
-            <button onClick={() => setShowCardModal(false)} className="close-button">Cerrar</button>
+            <div className="clients-form-actions">
+              <button
+                type="button"
+                className="clients-btn clients-btn--ghost"
+                onClick={() => setShowCardModal(false)}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showAddSubtractBalanceModal && selectedCardForBalance && (
-        <div className="add-subtract-balance-modal">
-          <div className="modal-content">
-            <h2>{operationForBalance === 'add' ? 'Añadir' : 'Restar'} Saldo a Tarjeta {selectedCardForBalance.card_number}</h2>
-            <form onSubmit={handleAddSubtractBalance}>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Cantidad"
-                value={amountForBalance}
-                onChange={(e) => setAmountForBalance(e.target.value)}
-                required
-              />
-              <select value={operationForBalance} onChange={(e) => setOperationForBalance(e.target.value)}>
-                <option value="add">Añadir</option>
-                <option value="subtract">Restar</option>
-              </select>
-              <button type="submit">Confirmar</button>
-              <button type="button" onClick={() => setShowAddSubtractBalanceModal(false)}>Cancelar</button>
+        <div className="clients-modal-overlay" role="dialog" aria-modal="true">
+          <div className="clients-modal">
+            <div className="clients-modal-head">
+              <h2>
+                {operationForBalance === 'add' ? 'Añadir' : 'Restar'} saldo ·{' '}
+                {selectedCardForBalance.card_number}
+              </h2>
+              <button
+                type="button"
+                className="clients-modal-close"
+                onClick={() => setShowAddSubtractBalanceModal(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleAddSubtractBalance} className="clients-form">
+              <label>
+                Cantidad
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={amountForBalance}
+                  onChange={(e) => setAmountForBalance(e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Operación
+                <select
+                  value={operationForBalance}
+                  onChange={(e) => setOperationForBalance(e.target.value)}
+                >
+                  <option value="add">Añadir</option>
+                  <option value="subtract">Restar</option>
+                </select>
+              </label>
+              <div className="clients-form-actions">
+                <button type="submit" className="clients-btn clients-btn--primary">
+                  Confirmar
+                </button>
+                <button
+                  type="button"
+                  className="clients-btn clients-btn--ghost"
+                  onClick={() => setShowAddSubtractBalanceModal(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
             </form>
           </div>
         </div>
       )}
 
-      <table className="clients-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Teléfono</th>
-            <th>Dirección</th>
-            <th>Saldo Tarjeta Recargable</th>
-            <th>Activo</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients.map((client) => (
-            <tr key={client._id}>
-              <td>{client.nombre}</td>
-              <td>{client.email}</td>
-              <td>{client.telefono}</td>
-              <td>{client.direccion}</td>
-              <td>{client.saldo_tarjeta_recargable}</td>
-              <td>{client.is_active ? 'Sí' : 'No'}</td>
-              <td>
-                <button onClick={() => handleEditClick(client)}>Editar</button>
-                <button onClick={() => handleDeleteClient(client._id)}>Eliminar</button>
-                <button onClick={() => handleManageCardsClick(client)}>Gestionar Tarjetas</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="pagination-controls">
-        <button onClick={handlePrevPage} disabled={currentPage === 1}>Anterior</button>
-        <span>Página {currentPage} de {totalPages} ({totalClients} clientes)</span>
-        <button onClick={handleNextPage} disabled={currentPage === totalPages}>Siguiente</button>
-      </div>
-
-      {/* ========== MODAL NFC ========== */}
-{showNFCModal && (
-  <div className="nfc-modal">
-    <div className="nfc-modal-content">
-      <div className="modal-header">
-        <h2>
-          {nfcOperation === 'linking' ? '🔗 Vincular Tarjeta NFC' : 
-           nfcOperation === 'reloading' ? '💳 Recargar Tarjeta NFC' : 
-           '🔍 Consultar Saldo NFC'}
-        </h2>
-        <button onClick={() => setShowNFCModal(false)} className="close-button">×</button>
-      </div>
-      
-      <div className="nfc-status-section">
-        <div className={`nfc-reader-status ${nfcReaderStatus.connected ? 'connected' : 'disconnected'}`}>
-          Lector NFC: {nfcReaderStatus.connected ? '🟢 Conectado' : '🔴 Desconectado'}
-        </div>
-        
-        {selectedCardForNFC && (
-          <div className="card-info">
-            <p><strong>Tarjeta:</strong> {selectedCardForNFC.card_number}</p>
-            <p><strong>Saldo Actual:</strong> ${selectedCardForNFC.balance}</p>
-            {selectedCardForNFC.nfc_uid && <p><strong>UID Actual:</strong> {selectedCardForNFC.nfc_uid}</p>}
-          </div>
-        )}
-
-        {nfcOperation === 'querying' && queryResult && (
-          <div className="query-result-info">
-            <h3>📋 Información de la Tarjeta:</h3>
-            <div className="card-info">
-              <p><strong>Número de Tarjeta:</strong> {queryResult.card_number}</p>
-              <p><strong>Saldo:</strong> ${queryResult.balance}</p>
-              <p><strong>UID NFC:</strong> {queryResult.nfc_uid}</p>
-              <p><strong>Propietario:</strong> {queryResult.client_info.name}</p>
-              <p><strong>Email:</strong> {queryResult.client_info.email}</p>
-              <p><strong>Teléfono:</strong> {queryResult.client_info.telefono}</p>
+      {showNFCModal && (
+        <div className="clients-modal-overlay" role="dialog" aria-modal="true">
+          <div className="clients-modal">
+            <div className="clients-modal-head">
+              <h2>
+                {nfcOperation === 'linking'
+                  ? 'Vincular tarjeta NFC'
+                  : nfcOperation === 'reloading'
+                    ? 'Recargar tarjeta NFC'
+                    : 'Consultar saldo NFC'}
+              </h2>
+              <button
+                type="button"
+                className="clients-modal-close"
+                onClick={() => setShowNFCModal(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
             </div>
-          </div>
-        )}
-      </div>
 
-      {nfcOperation === 'reloading' && nfcStatus === 'idle' && (
-        <div className="reload-amount-section">
-          <label><strong>💰 Monto a Recargar:</strong></label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            max="1000"
-            placeholder="0.00"
-            value={reloadAmount}
-            onChange={(e) => setReloadAmount(e.target.value)}
-          />
+            <div
+              className={`clients-nfc-pill ${nfcReaderStatus.connected ? 'is-on' : 'is-off'}`}
+            >
+              Lector NFC: {nfcReaderStatus.connected ? 'Conectado' : 'Desconectado'}
+            </div>
+
+            {selectedCardForNFC && (
+              <div className="clients-info-box">
+                <p>
+                  <strong>Tarjeta:</strong> {selectedCardForNFC.card_number}
+                </p>
+                <p>
+                  <strong>Saldo actual:</strong> ${selectedCardForNFC.balance}
+                </p>
+                {selectedCardForNFC.nfc_uid && (
+                  <p>
+                    <strong>UID:</strong> {selectedCardForNFC.nfc_uid}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {nfcOperation === 'querying' && queryResult && (
+              <div className="clients-info-box clients-info-box--ok">
+                <h3>Resultado de consulta</h3>
+                <p>
+                  <strong>Número:</strong> {queryResult.card_number}
+                </p>
+                <p>
+                  <strong>Saldo:</strong> ${queryResult.balance}
+                </p>
+                <p>
+                  <strong>UID NFC:</strong> {queryResult.nfc_uid}
+                </p>
+                <p>
+                  <strong>Propietario:</strong> {queryResult.client_info?.name}
+                </p>
+                <p>
+                  <strong>Email:</strong> {queryResult.client_info?.email}
+                </p>
+                <p>
+                  <strong>Teléfono:</strong> {queryResult.client_info?.telefono}
+                </p>
+              </div>
+            )}
+
+            {nfcOperation === 'reloading' && nfcStatus === 'idle' && (
+              <label className="clients-form-label-block">
+                Monto a recargar
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max="10000"
+                  placeholder="0.00"
+                  value={reloadAmount}
+                  onChange={(e) => setReloadAmount(e.target.value)}
+                />
+              </label>
+            )}
+
+            <div className={`clients-nfc-status ${nfcStatus}`}>
+              {nfcStatus === 'idle' && (
+                <button
+                  type="button"
+                  onClick={handleNFCOperation}
+                  disabled={!nfcReaderStatus.connected}
+                  className="clients-btn clients-btn--primary clients-btn--block"
+                >
+                  {nfcOperation === 'linking'
+                    ? 'Acercar tarjeta para vincular'
+                    : nfcOperation === 'reloading'
+                      ? 'Acercar tarjeta para recargar'
+                      : 'Acercar tarjeta para consultar'}
+                </button>
+              )}
+
+              {nfcStatus === 'waiting' && (
+                <div className="clients-nfc-wait">
+                  <div className="clients-spinner" />
+                  <p>Acerque la tarjeta al lector…</p>
+                </div>
+              )}
+
+              {nfcStatus === 'reading' && (
+                <div className="clients-nfc-wait">
+                  <div className="clients-spinner" />
+                  <p>Procesando tarjeta…</p>
+                </div>
+              )}
+
+              {nfcStatus === 'success' && (
+                <div className="clients-msg ok">
+                  {nfcOperation === 'linking'
+                    ? 'Tarjeta vinculada'
+                    : nfcOperation === 'reloading'
+                      ? 'Recarga'
+                      : 'Consulta'}{' '}
+                  exitosa
+                </div>
+              )}
+
+              {nfcStatus === 'error' && (
+                <div className="clients-msg err">
+                  Error en operación NFC
+                  <button
+                    type="button"
+                    className="clients-btn clients-btn--sm clients-btn--secondary"
+                    onClick={() => setNfcStatus('idle')}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {nfcLogs.length > 0 && (
+              <div className="clients-nfc-logs">
+                <h4>Registro</h4>
+                <div className="clients-logs-scroll">
+                  {nfcLogs.map((log, index) => (
+                    <div key={index} className="clients-log-entry">
+                      {log}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="clients-btn clients-btn--ghost clients-btn--block"
+              onClick={() => setShowNFCModal(false)}
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       )}
-
-      <div className={`nfc-operation-status ${nfcStatus}`}>
-        {nfcStatus === 'idle' && (
-          <button 
-            onClick={handleNFCOperation}
-            disabled={!nfcReaderStatus.connected}
-            className="nfc-action-button"
-          >
-            {nfcOperation === 'linking' ? '🔗 Acercar Tarjeta para Vincular' : 
-             nfcOperation === 'reloading' ? '💳 Acercar Tarjeta para Recargar' :
-             '🔍 Acercar Tarjeta para Consultar Saldo'}
-          </button>
-        )}
-        
-        {nfcStatus === 'waiting' && (
-          <div className="nfc-waiting">
-            <div className="spinner"></div>
-            <p>🔄 Acerque su tarjeta al lector NFC...</p>
-          </div>
-        )}
-        
-        {nfcStatus === 'reading' && (
-          <div className="nfc-reading">
-            <div className="spinner"></div>
-            <p>📖 Procesando tarjeta...</p>
-          </div>
-        )}
-        
-        {nfcStatus === 'success' && (
-          <div className="nfc-success">
-            <p>✅ {nfcOperation === 'linking' ? 'Tarjeta vinculada' : 
-                    nfcOperation === 'reloading' ? 'Recarga' : 
-                    'Consulta'} exitosa</p>
-          </div>
-        )}
-        
-        {nfcStatus === 'error' && (
-          <div className="nfc-error">
-            <p>❌ Error en operación NFC</p>
-            <button onClick={() => setNfcStatus('idle')}>🔄 Reintentar</button>
-          </div>
-        )}
-      </div>
-
-      {nfcLogs.length > 0 && (
-        <div className="nfc-logs">
-          <h4>📋 Registro de Operación:</h4>
-          <div className="logs-container">
-            {nfcLogs.map((log, index) => (
-              <div key={index} className="log-entry">{log}</div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      <button onClick={() => setShowNFCModal(false)} className="close-button-bottom">
-        Cerrar
-      </button>
-    </div>
-  </div>
-)}
     </div>
   );
 };

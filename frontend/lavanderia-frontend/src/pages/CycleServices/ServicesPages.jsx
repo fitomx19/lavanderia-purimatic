@@ -1,241 +1,207 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from '../../components/layout/Header';
-import { getServiceCycles, createServiceCycle, deleteServiceCycle } from '../../services/cycleService';
+import {
+  getServiceCycles,
+  createServiceCycle,
+  updateServiceCycle,
+  deleteServiceCycle,
+} from '../../services/cycleService';
 import { getAllActiveWashers, getAllActiveDryers } from '../../services/machineService';
-import { ToastContainer, toast } from 'react-toastify'; // Importar ToastContainer y toast
-import 'react-toastify/dist/ReactToastify.css'; // Importar el CSS de react-toastify
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './ServicesPages.css';
 
-const MachinesDropdown = ({ allowedMachines, allWashers, allDryers }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const EMPTY_FORM = {
+  name: '',
+  description: '',
+  service_type: 'lavado',
+  duration_minutes: '',
+  price: '',
+  price_per_kg: '',
+  price_tarjeta: '',
+  price_per_kg_tarjeta: '',
+  allowed_machines: [],
+  is_active: true,
+};
 
-  // Función para obtener información completa de la máquina
-  const getMachineDetails = (machineRef) => {
-    // Buscar en lavadoras
-    const washer = allWashers.find(w => w._id === machineRef._id);
-    if (washer) {
-      return {
-        ...washer,
-        type: 'Lavadora'
-      };
-    }
-    
-    // Buscar en secadoras
-    const dryer = allDryers.find(d => d._id === machineRef._id);
-    if (dryer) {
-      return {
-        ...dryer,
-        type: 'Secadora'
-      };
-    }
-    
-    // Si no se encuentra, devolver información básica
-    return {
-      numero: machineRef.name,
-      marca: 'N/A',
-      capacidad: 'N/A',
-      type: 'Desconocido'
-    };
-  };
-
-  const machineDetails = allowedMachines.map(getMachineDetails);
-
-  return (
-    <div className="machines-dropdown-container">
-      <button 
-        className="machines-dropdown-trigger"
-        onClick={() => setIsOpen(!isOpen)}
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-      >
-        {allowedMachines.length} máquina{allowedMachines.length !== 1 ? 's' : ''} permitida{allowedMachines.length !== 1 ? 's' : ''}
-        <span className={`dropdown-arrow ${isOpen ? 'open' : ''}`}>▼</span>
-      </button>
-      
-      {isOpen && (
-        <div className="machines-dropdown-content">
-          <div className="machines-dropdown-header">
-            <strong>Máquinas Permitidas</strong>
-          </div>
-          <div className="machines-list">
-            {machineDetails.map((machine, index) => (
-              <div key={index} className="machine-item">
-                <div className="machine-item-header">
-                  <span className={`machine-type-badge ${machine.type.toLowerCase()}`}>
-                    {machine.type}
-                  </span>
-                  <span className="machine-number">#{machine.numero}</span>
-                </div>
-                <div className="machine-item-details">
-                  <div className="machine-detail">
-                    <strong>Marca:</strong> {machine.marca}
-                  </div>
-                  <div className="machine-detail">
-                    <strong>Capacidad:</strong> {machine.capacidad} kg
-                  </div>
-                  {machine.modelo && (
-                    <div className="machine-detail">
-                      <strong>Modelo:</strong> {machine.modelo}
-                    </div>
-                  )}
-                  <div className="machine-detail">
-                    <strong>Estado:</strong> 
-                    <span className={`status-badge ${machine.is_active ? 'active' : 'inactive'}`}>
-                      {machine.is_active ? 'Activa' : 'Inactiva'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+const TYPE_LABELS = {
+  lavado: 'Lavado',
+  secado: 'Secado',
+  encargo_lavado: 'Encargo',
 };
 
 const ServicesPages = () => {
   const [cycles, setCycles] = useState([]);
   const [washers, setWashers] = useState([]);
   const [dryers, setDryers] = useState([]);
-  const [filteredWashers, setFilteredWashers] = useState([]); // Nuevo estado para lavadoras filtradas
-  const [filteredDryers, setFilteredDryers] = useState([]); // Nuevo estado para secadoras filtradas
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [typeFilter, setTypeFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // Nuevo estado para controlar los pasos
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    service_type: 'lavado', // Valor por defecto
-    duration_minutes: '',
-    price: '',
-    price_per_kg: '',
-    allowed_machines: [],
-    is_active: true,
-  });
+  const [editingCycle, setEditingCycle] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [expandedId, setExpandedId] = useState(null);
+  const prevServiceType = useRef(formData.service_type);
 
-  // Efecto para cargar datos iniciales: ciclos, lavadoras y secadoras
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const cyclesResponse = await getServiceCycles(currentPage, 12);
+      setCycles(cyclesResponse.data || []);
+      setTotalPages(cyclesResponse.pagination?.total_pages || 1);
+
+      const [washersRes, dryersRes] = await Promise.all([
+        getAllActiveWashers(),
+        getAllActiveDryers(),
+      ]);
+      setWashers(washersRes.data || []);
+      setDryers(dryersRes.data || []);
+      setError(null);
+    } catch (err) {
+      const msg = err.message || 'Error al cargar ciclos de servicio.';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const cyclesResponse = await getServiceCycles(currentPage, 10);
-        setCycles(cyclesResponse.data);
-        setTotalPages(cyclesResponse.pagination.total_pages);
-
-        const allWashersResponse = await getAllActiveWashers();
-        setWashers(allWashersResponse.data);
-        
-        const allDryersResponse = await getAllActiveDryers();
-        setDryers(allDryersResponse.data);
-
-        setError(null);
-      } catch (err) {
-        setError(err.message || 'Error al cargar datos.');
-        toast.error('Error al cargar los ciclos de servicio: ' + (err.message || 'Error desconocido'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [currentPage]);
 
-  // Efecto para filtrar máquinas según el tipo de servicio seleccionado
   useEffect(() => {
-    const currentServiceType = formData.service_type;
-    let tempFilteredWashers = [];
-    let tempFilteredDryers = [];
-
-    if (currentServiceType === 'lavado') {
-      tempFilteredWashers = washers;
-    } else if (currentServiceType === 'secado') {
-      tempFilteredDryers = dryers;
-    } else if (currentServiceType === 'encargo_lavado') {
-      // Para encargo_lavado, permitir tanto lavadoras como secadoras
-      tempFilteredWashers = washers;
-      tempFilteredDryers = dryers;
+    if (prevServiceType.current !== formData.service_type) {
+      prevServiceType.current = formData.service_type;
+      setFormData((prev) => ({ ...prev, allowed_machines: [] }));
     }
+  }, [formData.service_type]);
 
-    setFilteredWashers(tempFilteredWashers);
-    setFilteredDryers(tempFilteredDryers);
+  const filteredWashers =
+    formData.service_type === 'lavado' || formData.service_type === 'encargo_lavado'
+      ? washers
+      : [];
+  const filteredDryers =
+    formData.service_type === 'secado' || formData.service_type === 'encargo_lavado'
+      ? dryers
+      : [];
 
-    // Limpiar allowed_machines si el tipo de servicio cambia para evitar incompatibilidades
-    setFormData(prevData => ({ ...prevData, allowed_machines: [] }));
+  const visibleCycles =
+    typeFilter === 'all'
+      ? cycles
+      : cycles.filter((c) => c.service_type === typeFilter);
 
-  }, [formData.service_type, washers, dryers]); // Dependencias para re-filtrar cuando cambian
+  const stats = {
+    total: cycles.length,
+    lavado: cycles.filter((c) => c.service_type === 'lavado').length,
+    secado: cycles.filter((c) => c.service_type === 'secado').length,
+    encargo: cycles.filter((c) => c.service_type === 'encargo_lavado').length,
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleMachineSelectionChange = (e) => {
-    const { value, checked } = e.target; 
-    const [machineId, machineNumber] = value.split('-'); 
+    const { value, checked } = e.target;
+    const [machineId, machineNumber] = value.split('-');
 
-    setFormData((prevData) => {
-      const newAllowedMachines = checked
-        ? [...prevData.allowed_machines, { _id: machineId, name: machineNumber }]
-        : prevData.allowed_machines.filter((machine) => machine._id !== machineId);
-      return { ...prevData, allowed_machines: newAllowedMachines };
+    setFormData((prev) => {
+      const next = checked
+        ? [...prev.allowed_machines, { _id: machineId, name: machineNumber }]
+        : prev.allowed_machines.filter((m) => m._id !== machineId);
+      return { ...prev, allowed_machines: next };
     });
+  };
+
+  const resetForm = () => {
+    setFormData(EMPTY_FORM);
+    prevServiceType.current = 'lavado';
+    setEditingCycle(null);
+    setCurrentStep(1);
+    setShowForm(false);
+  };
+
+  const openCreate = () => {
+    setEditingCycle(null);
+    setFormData(EMPTY_FORM);
+    prevServiceType.current = 'lavado';
+    setCurrentStep(1);
+    setShowForm(true);
+  };
+
+  const openEdit = (cycle) => {
+    setEditingCycle(cycle);
+    const next = {
+      name: cycle.name || '',
+      description: cycle.description || '',
+      service_type: cycle.service_type || 'lavado',
+      duration_minutes: cycle.duration_minutes ?? '',
+      price: cycle.price != null ? String(cycle.price) : '',
+      price_per_kg: cycle.price_per_kg != null ? String(cycle.price_per_kg) : '',
+      price_tarjeta: cycle.price_tarjeta != null ? String(cycle.price_tarjeta) : '',
+      price_per_kg_tarjeta:
+        cycle.price_per_kg_tarjeta != null ? String(cycle.price_per_kg_tarjeta) : '',
+      allowed_machines: Array.isArray(cycle.allowed_machines)
+        ? cycle.allowed_machines.map((m) => ({
+            _id: m._id,
+            name: String(m.name),
+          }))
+        : [],
+      is_active: cycle.is_active !== false,
+    };
+    prevServiceType.current = next.service_type;
+    setFormData(next);
+    setCurrentStep(1);
+    setShowForm(true);
   };
 
   const validateStep1 = () => {
     const { name, description, duration_minutes, service_type, price, price_per_kg } = formData;
-    
-    if (!name || !description || !duration_minutes) {
-      toast.error('Por favor, completa el nombre, descripción y duración.');
+
+    if (!name?.trim() || !description?.trim() || !duration_minutes) {
+      toast.error('Completa nombre, descripción y duración.');
       return false;
     }
 
     if (service_type === 'encargo_lavado') {
       if (!price_per_kg || parseFloat(price_per_kg) <= 0) {
-        toast.error('Por favor, ingresa un precio por kilogramo válido para encargo de lavado.');
+        toast.error('Ingresa un precio por kilogramo válido.');
         return false;
       }
-    } else {
-      if (!price || parseFloat(price) <= 0) {
-        toast.error('Por favor, ingresa un precio válido.');
-        return false;
-      }
+    } else if (!price || parseFloat(price) <= 0) {
+      toast.error('Ingresa un precio válido.');
+      return false;
     }
 
     return true;
   };
 
-  const handleNextStep = () => {
-    // Validar el paso actual antes de avanzar
-    if (currentStep === 1) {
-      if (!validateStep1()) {
-        return;
-      }
-    }
-    setCurrentStep(prevStep => prevStep + 1);
-  };
-
-  const handlePreviousStep = () => {
-    setCurrentStep(prevStep => prevStep - 1);
-  };
-
   const prepareFormDataForSubmit = () => {
     const submitData = {
-      name: formData.name,
-      description: formData.description,
+      name: formData.name.trim(),
+      description: formData.description.trim(),
       service_type: formData.service_type,
-      duration_minutes: parseInt(formData.duration_minutes),
+      duration_minutes: parseInt(formData.duration_minutes, 10),
       allowed_machines: formData.allowed_machines,
-      is_active: formData.is_active
+      is_active: formData.is_active,
     };
 
-    // Agregar el campo de precio según el tipo de servicio
     if (formData.service_type === 'encargo_lavado') {
       submitData.price_per_kg = parseFloat(formData.price_per_kg);
+      if (formData.price_per_kg_tarjeta !== '' && formData.price_per_kg_tarjeta != null) {
+        submitData.price_per_kg_tarjeta = parseFloat(formData.price_per_kg_tarjeta);
+      }
     } else {
       submitData.price = parseFloat(formData.price);
+      if (formData.price_tarjeta !== '' && formData.price_tarjeta != null) {
+        submitData.price_tarjeta = parseFloat(formData.price_tarjeta);
+      }
     }
 
     return submitData;
@@ -243,278 +209,490 @@ const ServicesPages = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Solo enviar el formulario si estamos en el último paso
-    if (currentStep !== 2) {
+    if (currentStep !== 2) return;
+
+    if (!formData.allowed_machines.length) {
+      toast.error('Selecciona al menos una máquina permitida.');
       return;
     }
 
     try {
+      setSaving(true);
       const submitData = prepareFormDataForSubmit();
-      await createServiceCycle(submitData); 
-      setShowForm(false);
-      toast.success('Ciclo de servicio creado exitosamente!'); // Notificación de éxito
-      setFormData({
-        name: '',
-        description: '',
-        service_type: 'lavado',
-        duration_minutes: '',
-        price: '',
-        price_per_kg: '',
-        allowed_machines: [],
-        is_active: true,
-      });
-      setCurrentStep(1); // Resetear a la primera página después de la creación
-      // Refrescar los datos después de una creación exitosa
-      const updatedData = await getServiceCycles(currentPage, 10);
-      setCycles(updatedData.data);
-      setTotalPages(updatedData.pagination.total_pages);
 
-      const allWashersResponse = await getAllActiveWashers();
-      setWashers(allWashersResponse.data);
-      const allDryersResponse = await getAllActiveDryers();
-      setDryers(allDryersResponse.data);
+      if (editingCycle) {
+        await updateServiceCycle(editingCycle._id, submitData);
+        toast.success('Ciclo actualizado.');
+      } else {
+        await createServiceCycle(submitData);
+        toast.success('Ciclo creado.');
+      }
 
+      resetForm();
+      await fetchData();
     } catch (err) {
-      // Cerrar el modal y mostrar el mensaje de error del backend
-      setShowForm(false); 
-      const errorMessage = err.response && err.response.data && err.response.data.message 
-                           ? err.response.data.message 
-                           : 'Error al guardar el ciclo de servicio.';
-      setError(errorMessage);
-      toast.error(errorMessage); // Notificación de error
-      setCurrentStep(1); // Resetear a la primera página si hay un error
+      const errorMessage =
+        err.message ||
+        err.errors ||
+        'Error al guardar el ciclo de servicio.';
+      toast.error(typeof errorMessage === 'string' ? errorMessage : 'Error de validación.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este ciclo de servicio?')) {
-      try {
-        await deleteServiceCycle(id);
-        toast.success('Ciclo de servicio eliminado exitosamente!'); // Notificación de éxito
-        // Refrescar los datos después de una eliminación exitosa
-        const updatedData = await getServiceCycles(currentPage, 10);
-        setCycles(updatedData.data);
-        setTotalPages(updatedData.pagination.total_pages);
-
-        const allWashersResponse = await getAllActiveWashers();
-        setWashers(allWashersResponse.data);
-        const allDryersResponse = await getAllActiveDryers();
-        setDryers(allDryersResponse.data);
-
-      } catch (err) {
-        // Mostrar el mensaje de error del backend
-        const errorMessage = err.response && err.response.data && err.response.data.message 
-                           ? err.response.data.message 
-                           : 'Error al eliminar el ciclo de servicio.';
-        setError(errorMessage);
-        toast.error(errorMessage); // Notificación de error
-      }
+    if (!window.confirm('¿Eliminar este ciclo de servicio?')) return;
+    try {
+      await deleteServiceCycle(id);
+      toast.success('Ciclo eliminado.');
+      if (expandedId === id) setExpandedId(null);
+      await fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Error al eliminar el ciclo.');
     }
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
-
-  const getServiceTypeDisplayName = (type) => {
-    const typeNames = {
-      'lavado': 'Lavado',
-      'secado': 'Secado',
-      'encargo_lavado': 'Encargo Lavado'
-    };
-    return typeNames[type] || type;
   };
 
   const formatPrice = (cycle) => {
     if (cycle.service_type === 'encargo_lavado') {
-      return `$${parseFloat(cycle.price_per_kg || 0).toFixed(2)}/kg`;
-    } else {
-      return `$${parseFloat(cycle.price || 0).toFixed(2)}`;
+      const base = `$${parseFloat(cycle.price_per_kg || 0).toFixed(2)}/kg`;
+      if (cycle.price_per_kg_tarjeta != null) {
+        return `${base} · tarjeta $${parseFloat(cycle.price_per_kg_tarjeta).toFixed(2)}/kg`;
+      }
+      return base;
     }
+    const base = `$${parseFloat(cycle.price || 0).toFixed(2)}`;
+    if (cycle.price_tarjeta != null) {
+      return `${base} · tarjeta $${parseFloat(cycle.price_tarjeta).toFixed(2)}`;
+    }
+    return base;
+  };
+
+  const machineLabel = (ref) => {
+    const washer = washers.find((w) => w._id === ref._id);
+    if (washer) return `Lavadora #${washer.numero}`;
+    const dryer = dryers.find((d) => d._id === ref._id);
+    if (dryer) return `Secadora #${dryer.numero}`;
+    return ref.name ? `#${ref.name}` : 'Máquina';
   };
 
   return (
-    <div className="services-page">
+    <div className="cycles-layout">
       <Header />
-      <div className="services-container">
-        <h1>Gestión de Ciclos de Servicio</h1>
-        <button onClick={() => { setShowForm(true); setCurrentStep(1); }} className="add-service-button">
-          Agregar Nuevo Ciclo de Servicio
-        </button>
+      <main className="cycles-content">
+        <div className="cycles-header">
+          <div>
+            <h1>Ciclos de servicio</h1>
+            <p className="cycles-subtitle">
+              Define precios, duración y máquinas permitidas para lavado, secado y encargo.
+            </p>
+          </div>
+          <div className="cycles-stats">
+            <div className="cycles-stat">
+              <span className="cycles-stat-num">{stats.total}</span>
+              <span className="cycles-stat-label">Total</span>
+            </div>
+            <div className="cycles-stat">
+              <span className="cycles-stat-num">{stats.lavado}</span>
+              <span className="cycles-stat-label">Lavado</span>
+            </div>
+            <div className="cycles-stat">
+              <span className="cycles-stat-num">{stats.secado}</span>
+              <span className="cycles-stat-label">Secado</span>
+            </div>
+            <div className="cycles-stat">
+              <span className="cycles-stat-num">{stats.encargo}</span>
+              <span className="cycles-stat-label">Encargo</span>
+            </div>
+          </div>
+        </div>
 
-        {showForm && (
-          <div className={`service-form-modal ${showForm ? 'show' : ''}`}> {/* Aquí se aplica la clase 'show' */}
-            <div className="service-form-content">
-              <h2>Agregar Ciclo de Servicio - Paso {currentStep} de 2</h2> {/* Título dinámico */}
-              <div className="step-indicator">
-                <span className={`step-dot ${currentStep === 1 ? 'active' : ''}`}></span>
-                <span className={`step-dot ${currentStep === 2 ? 'active' : ''}`}></span>
+        <div className="cycles-toolbar">
+          <div className="cycles-filters">
+            {[
+              { id: 'all', label: 'Todos' },
+              { id: 'lavado', label: 'Lavado' },
+              { id: 'secado', label: 'Secado' },
+              { id: 'encargo_lavado', label: 'Encargo' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className={`cycles-chip ${typeFilter === f.id ? 'is-active' : ''}`}
+                onClick={() => setTypeFilter(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="cycles-btn-primary" onClick={openCreate}>
+            Nuevo ciclo
+          </button>
+        </div>
+
+        {error && (
+          <div className="cycles-error" role="alert">
+            <span>{error}</span>
+            <button type="button" onClick={() => setError(null)}>
+              Cerrar
+            </button>
+          </div>
+        )}
+
+        {loading && <p className="cycles-loading">Cargando ciclos…</p>}
+
+        {!loading && visibleCycles.length === 0 && (
+          <div className="cycles-empty">
+            <p>No hay ciclos{typeFilter !== 'all' ? ' de este tipo' : ''}.</p>
+            <button type="button" className="cycles-btn-primary" onClick={openCreate}>
+              Crear el primero
+            </button>
+          </div>
+        )}
+
+        {!loading && visibleCycles.length > 0 && (
+          <div className="cycles-grid">
+            {visibleCycles.map((cycle) => {
+              const open = expandedId === cycle._id;
+              return (
+                <article
+                  key={cycle._id}
+                  className={`cycle-card cycle-card--${cycle.service_type} ${open ? 'is-open' : ''}`}
+                >
+                  <div className="cycle-card-top">
+                    <div>
+                      <span className="cycle-type">{TYPE_LABELS[cycle.service_type] || cycle.service_type}</span>
+                      <h3>{cycle.name}</h3>
+                      <p className="cycle-desc">{cycle.description}</p>
+                    </div>
+                    <span className={`cycle-status ${cycle.is_active ? 'on' : 'off'}`}>
+                      {cycle.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+
+                  <div className="cycle-meta">
+                    <div>
+                      <span className="meta-label">Duración</span>
+                      <span className="meta-value">{cycle.duration_minutes} min</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Precio</span>
+                      <span className="meta-value">{formatPrice(cycle)}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Máquinas</span>
+                      <span className="meta-value">
+                        {(cycle.allowed_machines || []).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="cycle-actions">
+                    <button
+                      type="button"
+                      className="cycles-btn-ghost"
+                      onClick={() => setExpandedId(open ? null : cycle._id)}
+                    >
+                      {open ? 'Ocultar' : 'Detalle'}
+                    </button>
+                    <button
+                      type="button"
+                      className="cycles-btn-edit"
+                      onClick={() => openEdit(cycle)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="cycles-btn-danger"
+                      onClick={() => handleDelete(cycle._id)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+
+                  {open && (
+                    <div className="cycle-detail">
+                      <h4>Máquinas permitidas</h4>
+                      {(cycle.allowed_machines || []).length === 0 ? (
+                        <p className="cycles-muted">Ninguna asignada</p>
+                      ) : (
+                        <ul className="cycle-machine-list">
+                          {(cycle.allowed_machines || []).map((m) => (
+                            <li key={m._id}>{machineLabel(m)}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <div className="cycles-pagination">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              Anterior
+            </button>
+            <span>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
+      </main>
+
+      {showForm && (
+        <div className="cycles-modal" role="dialog" aria-modal="true">
+          <div className="cycles-modal-panel">
+            <div className="cycles-modal-head">
+              <div>
+                <h2>{editingCycle ? 'Editar ciclo' : 'Nuevo ciclo'}</h2>
+                <p>Paso {currentStep} de 2</p>
               </div>
+              <button type="button" className="cycles-modal-close" onClick={resetForm}>
+                Cerrar
+              </button>
+            </div>
 
-              <form onSubmit={handleSubmit}>
-                {currentStep === 1 && (
-                  <div className="form-step-1">
-                    <div className="form-group">
-                      <label htmlFor="cycle-name">Nombre:</label>
-                      <input type="text" id="cycle-name" name="name" value={formData.name} onChange={handleInputChange} required />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="cycle-description">Descripción:</label>
-                      <input type="text" id="cycle-description" name="description" value={formData.description} onChange={handleInputChange} required />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="service-type">Tipo de Servicio:</label>
-                      <select id="service-type" name="service_type" value={formData.service_type} onChange={handleInputChange} required>
+            <div className="cycles-steps">
+              <span className={currentStep >= 1 ? 'is-active' : ''} />
+              <span className={currentStep >= 2 ? 'is-active' : ''} />
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              {currentStep === 1 && (
+                <div className="cycles-form">
+                  <label>
+                    Nombre
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Descripción
+                    <input
+                      type="text"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </label>
+                  <div className="cycles-form-row">
+                    <label>
+                      Tipo
+                      <select
+                        name="service_type"
+                        value={formData.service_type}
+                        onChange={handleInputChange}
+                        required
+                      >
                         <option value="lavado">Lavado</option>
                         <option value="secado">Secado</option>
-                        <option value="encargo_lavado">Encargo Lavado</option>
+                        <option value="encargo_lavado">Encargo lavado</option>
                       </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="duration-minutes">Duración (minutos):</label>
-                      <input type="number" id="duration-minutes" name="duration_minutes" value={formData.duration_minutes} onChange={handleInputChange} required />
-                    </div>
-                    
-                    {/* Campos de precio condicionales */}
-                    {formData.service_type === 'encargo_lavado' ? (
-                      <div className="form-group">
-                        <label htmlFor="price-per-kg">Precio por Kilogramo:</label>
-                        <input type="number" id="price-per-kg" name="price_per_kg" value={formData.price_per_kg} onChange={handleInputChange} step="0.01" required />
-                      </div>
-                    ) : (
-                    <div className="form-group">
-                      <label htmlFor="price">Precio:</label>
-                      <input type="number" id="price" name="price" value={formData.price} onChange={handleInputChange} step="0.01" required />
-                    </div>
-                    )}
+                    </label>
+                    <label>
+                      Duración (min)
+                      <input
+                        type="number"
+                        name="duration_minutes"
+                        min="1"
+                        max="180"
+                        value={formData.duration_minutes}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </label>
+                  </div>
 
-                    <div className="form-group">
-                      <label htmlFor="is-active">
-                        <input type="checkbox" id="is-active" name="is_active" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} /> Activo
+                  {formData.service_type === 'encargo_lavado' ? (
+                    <div className="cycles-form-row">
+                      <label>
+                        Precio / kg
+                        <input
+                          type="number"
+                          name="price_per_kg"
+                          step="0.01"
+                          min="0.01"
+                          value={formData.price_per_kg}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Precio / kg tarjeta (opc.)
+                        <input
+                          type="number"
+                          name="price_per_kg_tarjeta"
+                          step="0.01"
+                          min="0"
+                          value={formData.price_per_kg_tarjeta}
+                          onChange={handleInputChange}
+                          placeholder="Mismo precio"
+                        />
                       </label>
                     </div>
-                    <div className="form-actions">
-                      <button type="button" onClick={handleNextStep} className="submit-button">Siguiente</button>
-                      <button type="button" onClick={() => { setShowForm(false); setCurrentStep(1); }} className="cancel-button">Cancelar</button>
+                  ) : (
+                    <div className="cycles-form-row">
+                      <label>
+                        Precio
+                        <input
+                          type="number"
+                          name="price"
+                          step="0.01"
+                          min="0.01"
+                          value={formData.price}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Precio tarjeta (opc.)
+                        <input
+                          type="number"
+                          name="price_tarjeta"
+                          step="0.01"
+                          min="0"
+                          value={formData.price_tarjeta}
+                          onChange={handleInputChange}
+                          placeholder="Mismo precio"
+                        />
+                      </label>
                     </div>
+                  )}
+
+                  <label className="cycles-check">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_active}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, is_active: e.target.checked }))
+                      }
+                    />
+                    Ciclo activo
+                  </label>
+
+                  <div className="cycles-form-actions">
+                    <button type="button" className="cycles-btn-ghost" onClick={resetForm}>
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="cycles-btn-primary"
+                      onClick={() => {
+                        if (validateStep1()) setCurrentStep(2);
+                      }}
+                    >
+                      Siguiente
+                    </button>
                   </div>
-                )}
+                </div>
+              )}
 
-                {currentStep === 2 && (
-                  <div className="form-step-2">
-                    <div className="form-group">
-                      <label>Máquinas Permitidas:</label>
-                      <div className="machine-selection-grid">
-                        {filteredWashers.length > 0 && (
-                          <div className="machine-type-section">
-                            <h3>Lavadoras:</h3>
-                            <div className="machine-list">
-                              {filteredWashers.map((washer) => (
-                                <label key={washer._id} className="machine-checkbox-label">
-                                  <input
-                                    type="checkbox"
-                                    value={`${washer._id}-${washer.numero}`}
-                                    checked={formData.allowed_machines.some((machine) => machine._id === washer._id)}
-                                    onChange={handleMachineSelectionChange}
-                                  />
-                                  <span className="machine-info">Lavadora {washer.numero} ({washer.marca} - {washer.capacidad} kg)</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {filteredDryers.length > 0 && (
-                          <div className="machine-type-section">
-                            <h3>Secadoras:</h3>
-                            <div className="machine-list">
-                              {filteredDryers.map((dryer) => (
-                                <label key={dryer._id} className="machine-checkbox-label">
-                                  <input
-                                    type="checkbox"
-                                    value={`${dryer._id}-${dryer.numero}`}
-                                    checked={formData.allowed_machines.some((machine) => machine._id === dryer._id)}
-                                    onChange={handleMachineSelectionChange}
-                                  />
-                                  <span className="machine-info">Secadora {dryer.numero} ({dryer.marca} - {dryer.capacidad} kg)</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {filteredWashers.length === 0 && filteredDryers.length === 0 && ( /* Mensaje si no hay máquinas */
-                          <p className="no-machines-message">No hay máquinas disponibles para este tipo de servicio.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="form-actions">
-                      <button type="button" onClick={handlePreviousStep} className="cancel-button">Anterior</button>
-                      <button type="submit" className="submit-button">Crear Ciclo</button>
-                    </div>
+              {currentStep === 2 && (
+                <div className="cycles-form">
+                  <p className="cycles-help">
+                    Elige las máquinas donde puede usarse este ciclo
+                    {formData.service_type === 'lavado' && ' (lavadoras)'}.
+                    {formData.service_type === 'secado' && ' (secadoras)'}.
+                    {formData.service_type === 'encargo_lavado' && ' (lavadoras y secadoras)'}.
+                  </p>
+
+                  <div className="cycles-machines">
+                    {filteredWashers.length > 0 && (
+                      <section>
+                        <h3>Lavadoras</h3>
+                        <div className="cycles-machine-checks">
+                          {filteredWashers.map((w) => (
+                            <label key={w._id} className="cycles-machine-item">
+                              <input
+                                type="checkbox"
+                                value={`${w._id}-${w.numero}`}
+                                checked={formData.allowed_machines.some((m) => m._id === w._id)}
+                                onChange={handleMachineSelectionChange}
+                              />
+                              <span>
+                                #{w.numero} · {w.marca} · {w.capacidad} kg
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                    {filteredDryers.length > 0 && (
+                      <section>
+                        <h3>Secadoras</h3>
+                        <div className="cycles-machine-checks">
+                          {filteredDryers.map((d) => (
+                            <label key={d._id} className="cycles-machine-item">
+                              <input
+                                type="checkbox"
+                                value={`${d._id}-${d.numero}`}
+                                checked={formData.allowed_machines.some((m) => m._id === d._id)}
+                                onChange={handleMachineSelectionChange}
+                              />
+                              <span>
+                                #{d.numero} · {d.marca} · {d.capacidad} kg
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                    {filteredWashers.length === 0 && filteredDryers.length === 0 && (
+                      <p className="cycles-muted">No hay máquinas activas para este tipo.</p>
+                    )}
                   </div>
-                )}
-              </form>
-            </div>
+
+                  <div className="cycles-form-actions">
+                    <button
+                      type="button"
+                      className="cycles-btn-ghost"
+                      onClick={() => setCurrentStep(1)}
+                    >
+                      Anterior
+                    </button>
+                    <button type="submit" className="cycles-btn-primary" disabled={saving}>
+                      {saving
+                        ? 'Guardando…'
+                        : editingCycle
+                          ? 'Guardar cambios'
+                          : 'Crear ciclo'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {loading && <p className="loading-message">Cargando ciclos de servicio...</p>}
-        {error && <p className="error-message">{error}</p>}
-
-        {!loading && !error && cycles.length === 0 && <p>No hay ciclos de servicio disponibles.</p>}
-
-        {!loading && !error && cycles.length > 0 && (
-          <div className="services-table-container">
-            <table className="services-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Descripción</th>
-                  <th>Tipo</th>
-                  <th>Duración (min)</th>
-                  <th>Precio</th>
-                  <th>Máquinas Permitidas</th> 
-                  <th>Activo</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cycles.map((cycle) => (
-                  <tr key={cycle._id}>
-                    <td>{cycle.name}</td>
-                    <td>{cycle.description}</td>
-                    <td>{getServiceTypeDisplayName(cycle.service_type)}</td>
-                    <td>{cycle.duration_minutes}</td>
-                    <td>{formatPrice(cycle)}</td>
-                    <td>
-                      <MachinesDropdown 
-                        allowedMachines={cycle.allowed_machines} 
-                        allWashers={washers}
-                        allDryers={dryers}
-                      />
-                    </td>
-                    <td>{cycle.is_active ? 'Sí' : 'No'}</td>
-                    <td>
-                      <button onClick={() => handleDelete(cycle._id)} className="delete-button">Eliminar</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="pagination-controls">
-              <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
-                Anterior
-              </button>
-              <span>Página {currentPage} de {totalPages}</span>
-              <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>
-                Siguiente
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-      <ToastContainer position="bottom-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+      />
     </div>
   );
 };

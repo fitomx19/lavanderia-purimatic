@@ -252,6 +252,7 @@ def get_all_transactions(current_user):
         - page: Página actual (default: 1)
         - per_page: Elementos por página (default: 50)
         - card_id: Filtrar por tarjeta específica
+        - client_id: Filtrar por cliente (todas sus tarjetas)
         - transaction_type: Filtrar por tipo de transacción
         - employee_id: Filtrar por empleado
         - start_date: Fecha inicial (formato: YYYY-MM-DD)
@@ -261,6 +262,7 @@ def get_all_transactions(current_user):
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 50))
         card_id = request.args.get('card_id')
+        client_id = request.args.get('client_id')
         transaction_type = request.args.get('transaction_type')
         employee_id = request.args.get('employee_id')
         start_date = request.args.get('start_date')
@@ -270,6 +272,7 @@ def get_all_transactions(current_user):
             page=page,
             per_page=per_page,
             card_id=card_id,
+            client_id=client_id,
             transaction_type=transaction_type,
             employee_id=employee_id,
             start_date=start_date,

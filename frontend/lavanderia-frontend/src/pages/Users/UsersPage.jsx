@@ -21,7 +21,7 @@ const UsersPage = () => {
     role: '',
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalEmployees, setTotalEmployees] = useState(0);
 
@@ -46,7 +46,7 @@ const UsersPage = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
       try {
         await deleteEmployee(id);
-        setEmployees(employees.filter(employee => employee._id !== id));
+        setEmployees(employees.filter((employee) => employee._id !== id));
         alert('Empleado eliminado exitosamente.');
       } catch (err) {
         setError(err.message);
@@ -113,118 +113,260 @@ const UsersPage = () => {
   };
 
   if (loading) {
-    return <div>Cargando empleados...</div>;
+    return (
+      <div className="users-layout">
+        <Header />
+        <main className="users-content">
+          <p className="users-muted">Cargando usuarios…</p>
+        </main>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <div className="users-layout">
+        <Header />
+        <main className="users-content">
+          <div className="users-msg err">Error: {error}</div>
+        </main>
+      </div>
+    );
   }
 
   return (
-    <div className="users-page-container">
+    <div className="users-layout">
       <Header />
-      <h1>Gestión de Usuarios (Empleados)</h1>
-      <button onClick={() => setShowCreateForm(!showCreateForm)} className="create-employee-button">
-        {showCreateForm ? 'Cancelar' : 'Agregar Nuevo Empleado'}
-      </button>
+      <main className="users-content">
+        <header className="users-page-head">
+          <div>
+            <h1>Administración de usuarios</h1>
+            <p className="users-help">
+              Alta y edición de empleados y administradores con acceso al sistema.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="users-btn users-btn--primary"
+            onClick={() => setShowCreateForm(!showCreateForm)}
+          >
+            {showCreateForm ? 'Cancelar' : 'Nuevo usuario'}
+          </button>
+        </header>
 
-      {showCreateForm && (
-        <form onSubmit={handleCreateEmployee} className="create-employee-form">
-          <h2>Crear Nuevo Empleado</h2>
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={newEmployee.username}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={newEmployee.email}
-            onChange={handleInputChange}
-            required
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={newEmployee.password}
-            onChange={handleInputChange}
-            required
-          />
-          <select name="role" value={newEmployee.role} onChange={handleInputChange}>
-            <option value="empleado">Empleado</option>
-            <option value="admin">Admin</option>
-          </select>
-          <input
-            type="text"
-            name="store_id"
-            placeholder="Store ID"
-            value={newEmployee.store_id}
-            onChange={handleInputChange}
-            required
-          />
-          <button type="submit">Guardar Empleado</button>
-        </form>
-      )}
+        {showCreateForm && (
+          <section className="users-card">
+            <h2>Nuevo usuario</h2>
+            <form onSubmit={handleCreateEmployee} className="users-form">
+              <label>
+                Usuario
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="nombre.usuario"
+                  value={newEmployee.username}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="correo@ejemplo.com"
+                  value={newEmployee.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Contraseña
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Contraseña"
+                  value={newEmployee.password}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <label>
+                Rol
+                <select name="role" value={newEmployee.role} onChange={handleInputChange}>
+                  <option value="empleado">Empleado</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label>
+                ID de tienda
+                <input
+                  type="text"
+                  name="store_id"
+                  placeholder="store_001"
+                  value={newEmployee.store_id}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+              <div className="users-form-actions">
+                <button type="submit" className="users-btn users-btn--primary">
+                  Guardar usuario
+                </button>
+                <button
+                  type="button"
+                  className="users-btn users-btn--ghost"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        <section className="users-card">
+          <div className="users-card-head">
+            <h2>Usuarios</h2>
+            <span className="users-count">{totalEmployees} registrados</span>
+          </div>
+
+          <div className="users-table-wrap">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((employee) => (
+                  <tr key={employee._id}>
+                    <td>
+                      <strong className="users-name">{employee.username}</strong>
+                    </td>
+                    <td>{employee.email}</td>
+                    <td>
+                      <span
+                        className={`users-role ${
+                          employee.role === 'admin' ? 'is-admin' : 'is-employee'
+                        }`}
+                      >
+                        {employee.role === 'admin' ? 'Admin' : 'Empleado'}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`users-badge ${
+                          employee.is_active ? 'is-active' : 'is-inactive'
+                        }`}
+                      >
+                        {employee.is_active ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="users-row-actions">
+                        <button
+                          type="button"
+                          className="users-btn users-btn--sm users-btn--secondary"
+                          onClick={() => handleEditClick(employee)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="users-btn users-btn--sm users-btn--danger"
+                          onClick={() => handleDeleteEmployee(employee._id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="users-pagination">
+            <button
+              type="button"
+              className="users-btn users-btn--ghost"
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </button>
+            <span>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              type="button"
+              className="users-btn users-btn--ghost"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+            </button>
+          </div>
+        </section>
+      </main>
 
       {editingEmployee && (
-        <div className="edit-employee-modal">
-          <form onSubmit={handleUpdateEmployee} className="edit-employee-form">
-            <h2>Editar Empleado</h2>
-            <label>Email:</label>
-            <input
-              type="email"
-              name="email"
-              value={editFormData.email}
-              onChange={handleEditFormChange}
-              required
-            />
-            <label>Rol:</label>
-            <select name="role" value={editFormData.role} onChange={handleEditFormChange}>
-              <option value="empleado">Empleado</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button type="submit">Actualizar Empleado</button>
-            <button type="button" onClick={() => setEditingEmployee(null)}>Cancelar</button>
-          </form>
+        <div className="users-modal-overlay" role="dialog" aria-modal="true">
+          <div className="users-modal">
+            <div className="users-modal-head">
+              <h2>Editar usuario · {editingEmployee.username}</h2>
+              <button
+                type="button"
+                className="users-modal-close"
+                onClick={() => setEditingEmployee(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleUpdateEmployee} className="users-form">
+              <label>
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  value={editFormData.email}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </label>
+              <label>
+                Rol
+                <select
+                  name="role"
+                  value={editFormData.role}
+                  onChange={handleEditFormChange}
+                >
+                  <option value="empleado">Empleado</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <div className="users-form-actions">
+                <button type="submit" className="users-btn users-btn--primary">
+                  Guardar cambios
+                </button>
+                <button
+                  type="button"
+                  className="users-btn users-btn--ghost"
+                  onClick={() => setEditingEmployee(null)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
-
-      <table className="users-table">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Rol</th>
-            <th>Activo</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.map((employee) => (
-            <tr key={employee._id}>
-              <td>{employee.username}</td>
-              <td>{employee.email}</td>
-              <td>{employee.role}</td>
-              <td>{employee.is_active ? 'Sí' : 'No'}</td>
-              <td>
-                <button onClick={() => handleEditClick(employee)}>Editar</button>
-                <button onClick={() => handleDeleteEmployee(employee._id)}>Eliminar</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="pagination-controls">
-        <button onClick={handlePrevPage} disabled={currentPage === 1}>Anterior</button>
-        <span>Página {currentPage} de {totalPages} ({totalEmployees} empleados)</span>
-        <button onClick={handleNextPage} disabled={currentPage === totalPages}>Siguiente</button>
-      </div>
     </div>
   );
 };

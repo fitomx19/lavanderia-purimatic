@@ -21,6 +21,21 @@ export const createSale = async (saleData) => {
   }
 };
 
+export const createReloadSale = async (reloadData) => {
+  try {
+    const token = getToken();
+    const response = await axios.post(`${API_BASE_URL}/api/sales/reload`, reloadData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Error de conexión al crear la recarga');
+  }
+};
+
 // Función para obtener la lista de ventas
 export const getSales = async (params = {}) => {
   try {

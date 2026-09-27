@@ -437,66 +437,57 @@ class CardService:
         page: int = 1,
         per_page: int = 50,
         card_id: Optional[str] = None,
+        client_id: Optional[str] = None,
         transaction_type: Optional[str] = None,
         employee_id: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Obtener transacciones con filtros opcionales
-
-        Args:
-            page: Página actual
-            per_page: Elementos por página
-            card_id: Filtrar por tarjeta
-            transaction_type: Filtrar por tipo
-            employee_id: Filtrar por empleado
-            start_date: Fecha inicial (YYYY-MM-DD)
-            end_date: Fecha final (YYYY-MM-DD)
-
-        Returns:
-            Dict: Transacciones con paginación
-        """
+        """Obtener transacciones con filtros opcionales (combinables)."""
         try:
             from app.repositories.card_transaction_repository import CardTransactionRepository
-            from datetime import datetime
+            from datetime import datetime, time
 
             transaction_repo = CardTransactionRepository()
 
-            # Si hay filtros de fecha, usar el método específico
-            if start_date and end_date:
-                start = datetime.fromisoformat(start_date)
-                end = datetime.fromisoformat(end_date)
-                result = transaction_repo.get_transactions_by_date_range(
-                    start_date=start,
-                    end_date=end,
-                    transaction_type=transaction_type,
-                    page=page,
-                    per_page=per_page
-                )
-            # Si hay filtro de tarjeta específica
-            elif card_id:
-                result = transaction_repo.get_transactions_by_card(
-                    card_id=card_id,
-                    page=page,
-                    per_page=per_page
-                )
-            # Si hay filtro de empleado
-            elif employee_id:
-                result = transaction_repo.get_transactions_by_employee(
-                    employee_id=employee_id,
-                    page=page,
-                    per_page=per_page
-                )
-            # Sin filtros, obtener todas
-            else:
-                result = transaction_repo.find_many(
-                    filter_criteria={},
-                    page=page,
-                    per_page=per_page,
-                    sort_by='created_at',
-                    sort_order=-1
-                )
+            start_dt = None
+            end_dt = None
+            if start_date:
+                start_dt = datetime.fromisoformat(start_date)
+            if end_date:
+                end_dt = datetime.fromisoformat(end_date)
+                if end_dt.hour == 0 and end_dt.minute == 0:
+                    end_dt = datetime.combine(end_dt.date(), time(23, 59, 59))
+
+            card_ids = None
+            if client_id and not card_id:
+                cards = self.card_repository.find_by_client_id(client_id, include_inactive=True)
+                card_ids = [str(c.get('_id')) for c in (cards or []) if c.get('_id')]
+                if not card_ids:
+                    return {
+                        'success': True,
+                        'message': 'El cliente no tiene tarjetas',
+                        'data': {
+                            'transactions': [],
+                            'pagination': {
+                                'page': page,
+                                'per_page': per_page,
+                                'total': 0,
+                                'total_pages': 0,
+                            },
+                        },
+                    }
+
+            result = transaction_repo.get_transactions_filtered(
+                card_id=card_id,
+                card_ids=card_ids,
+                transaction_type=transaction_type,
+                employee_id=employee_id,
+                start_date=start_dt,
+                end_date=end_dt,
+                page=page,
+                per_page=per_page,
+            )
 
             return {
                 'success': True,

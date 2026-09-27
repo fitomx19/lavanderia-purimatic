@@ -307,6 +307,12 @@ const SalesPage = () => {
 
       const response = await createSale(saleDataToSend);
       toast.success(response.message || 'Venta cobrada');
+      if (response.data && response.data.ticket_printed === false) {
+        toast.warning(
+          response.data.ticket_message ||
+            'La venta se cobró, pero no se pudo imprimir el ticket. Revisa la impresora.'
+        );
+      }
 
       await fetchAndUpdateSalesAndMachines();
 
